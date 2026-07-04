@@ -29,7 +29,7 @@ class CheckoutRequest extends FormRequest
             'attendees' => ['nullable', 'array'],
             'attendees.*.ticket_type_id' => ['required', 'integer'],
             'attendees.*.name' => ['required', 'string', 'max:255'],
-            'attendees.*.email' => ['required', 'email', 'max:255'],
+            'attendees.*.email' => ['nullable', 'email', 'max:255'],
             'attendees.*.phone' => ['nullable', 'string', 'max:64'],
             'attendees.*.organisation' => ['nullable', 'string', 'max:255'],
             'attendees.*.country' => ['nullable', 'string', 'max:64'],

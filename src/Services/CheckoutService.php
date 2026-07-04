@@ -57,7 +57,7 @@ class CheckoutService
         $this->assertReturnUrlsAllowed($data);
 
         $questions = $event->allRegistrationQuestions()->get();
-        $attendeeSets = $this->buildAttendeeSets($items, $data, $questions);
+        $attendeeSets = $this->buildAttendeeSets($event, $items, $data, $questions);
 
         $now = new DateTimeImmutable;
         $discountData = $discountCode === null ? null : DiscountCodeData::fromModel($discountCode);
@@ -126,7 +126,7 @@ class CheckoutService
                     /** @var Attendee $attendee */
                     $attendee = $item->attendees()->create([
                         'name' => $attendeeData['name'],
-                        'email' => $attendeeData['email'],
+                        'email' => $attendeeData['email'] ?? null,
                         'phone' => $attendeeData['phone'] ?? null,
                         'organisation' => $attendeeData['organisation'] ?? null,
                         'country' => $attendeeData['country'] ?? null,
@@ -296,14 +296,15 @@ class CheckoutService
 
     /**
      * Build per-unit attendee payloads (falling back to the purchaser) with
-     * validated, casted registration responses.
+     * validated, casted registration responses. When the event requires
+     * attendee details, every ticket must come with a named person instead.
      *
      * @param  list<array{0: TicketType, 1: int}>  $items
      * @param  array<string, mixed>  $data
      * @param  Collection<int, RegistrationQuestion>  $questions
      * @return array<int|string, list<array<string, mixed>>>
      */
-    protected function buildAttendeeSets(array $items, array $data, Collection $questions): array
+    protected function buildAttendeeSets(Event $event, array $items, array $data, Collection $questions): array
     {
         $provided = collect((array) ($data['attendees'] ?? []))->groupBy(fn (array $a) => (int) $a['ticket_type_id']);
         $sharedAnswers = (array) ($data['answers'] ?? []);
@@ -318,6 +319,22 @@ class CheckoutService
                 ]);
             }
 
+            if ($event->requires_attendee_details) {
+                if ($forType->count() !== $quantity) {
+                    throw ValidationException::withMessages([
+                        "attendees.{$ticketType->getKey()}" => "This event requires a name for every ticket: please provide {$quantity} attendee(s) for {$ticketType->name}.",
+                    ]);
+                }
+
+                foreach ($forType as $unit => $attendee) {
+                    if (blank($attendee['name'] ?? null)) {
+                        throw ValidationException::withMessages([
+                            "attendees.{$ticketType->getKey()}.{$unit}.name" => 'Each ticket needs the attendee\'s name ('.$ticketType->name.', ticket '.($unit + 1).').',
+                        ]);
+                    }
+                }
+            }
+
             $units = [];
 
             for ($unit = 0; $unit < $quantity; $unit++) {
@@ -328,6 +345,12 @@ class CheckoutService
                     'organisation' => $data['purchaser']['organisation'] ?? null,
                     'country' => $data['purchaser']['country'] ?? null,
                 ];
+
+                // Attendee email is optional when naming tickets — the
+                // purchaser stays the contact (column is non-nullable).
+                if (blank($attendee['email'] ?? null)) {
+                    $attendee['email'] = $data['purchaser']['email'];
+                }
 
                 // Per-attendee answers win over shared top-level answers.
                 $answers = array_replace($sharedAnswers, (array) ($attendee['answers'] ?? []));

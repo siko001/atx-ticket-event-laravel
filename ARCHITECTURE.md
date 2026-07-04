@@ -69,6 +69,7 @@ Receivers MUST:
   "timezone": "Europe/Malta",
   "is_recurring": false,
   "max_capacity": 120,
+  "requires_attendee_details": false,  // true → checkout must name every ticket (see §2)
   "published_at": "2026-07-01T09:30:00+00:00",
   "image_url": "https://laravel-app.example/storage/ticketing/events/hero.jpg",
   "gallery_urls": ["https://laravel-app.example/storage/ticketing/events/gallery/1.jpg"],
@@ -143,6 +144,10 @@ The WP plugin calls this **server-side** (proxied) so nothing sensitive runs in 
 ```
 
 - `attendees` is optional; when omitted, one attendee per ticket is cloned from `purchaser`.
+  **Exception:** when the event has `requires_attendee_details: true`, `attendees` is
+  mandatory — exactly one entry per ticket unit, each with a non-empty `name`
+  (`email` optional; blank emails fall back to the purchaser's). Otherwise checkout
+  returns 422 with `attendees.*` errors.
   When present, the per-type count must equal that item's quantity.
 - `answers` (top level) applies to all attendees; per-attendee `answers` win.
   Keys are registration question IDs from the synced payload.

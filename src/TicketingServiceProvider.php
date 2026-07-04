@@ -42,7 +42,7 @@ class TicketingServiceProvider extends PackageServiceProvider
             ->name('ticketing')
             ->hasConfigFile()
             ->hasViews('ticketing')
-            ->hasMigrations(['create_ticketing_tables', 'create_ticketing_settings_table', 'create_ticketing_connections_table', 'create_ticketing_logs_table', 'update_ticketing_events_add_media'])
+            ->hasMigrations(['create_ticketing_tables', 'create_ticketing_settings_table', 'create_ticketing_connections_table', 'create_ticketing_logs_table', 'update_ticketing_events_add_media', 'update_ticketing_events_add_attendee_details'])
             ->hasCommands([
                 MaterializeOccurrencesCommand::class,
                 PushEventsToWordPressCommand::class,

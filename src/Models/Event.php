@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $description
  * @property string|null $image
  * @property array<int, string>|null $gallery
+ * @property bool $requires_attendee_details
  * @property string|null $venue_name
  * @property string|null $venue_address
  * @property float|null $venue_lat
@@ -54,6 +55,7 @@ class Event extends Model
             'status' => EventStatus::class,
             'gallery' => 'array',
             'is_recurring' => 'boolean',
+            'requires_attendee_details' => 'boolean',
             'venue_lat' => 'float',
             'venue_lng' => 'float',
             'max_capacity' => 'integer',

@@ -30,6 +30,7 @@ class EventPayloadBuilder
             'timezone' => $event->timezone,
             'is_recurring' => $event->is_recurring,
             'max_capacity' => $event->max_capacity,
+            'requires_attendee_details' => (bool) $event->requires_attendee_details,
             'published_at' => $event->published_at?->toIso8601String(),
             'image_url' => $this->mediaUrl($event->image),
             'gallery_urls' => array_values(array_filter(array_map(

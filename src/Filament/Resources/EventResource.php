@@ -97,6 +97,9 @@ class EventResource extends TicketingResource
                         ->numeric()
                         ->minValue(1)
                         ->helperText('Applies per occurrence. Leave empty for unlimited.'),
+                    Toggle::make('requires_attendee_details')
+                        ->label('Name every ticket')
+                        ->helperText('Buyers must enter a name (and optional email) for each ticket — "Ticket 1: Mary, Ticket 2: John". Off = only the buyer\'s details are collected and tickets are issued in their name.'),
                     RichEditor::make('description')
                         ->columnSpanFull(),
                 ]),
