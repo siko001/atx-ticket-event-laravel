@@ -79,6 +79,8 @@ class ConnectionResource extends TicketingResource
             Section::make('Stripe keys (optional overrides)')
                 ->description('Leave empty to use the app-wide .env keys. Fill these to give this site its own Stripe account. Which pair is used follows the Test mode toggle; orders remember the mode they were placed in, so refunds always use the right account. Stored encrypted.')
                 ->collapsed()
+                ->columnSpanFull()
+                ->columns(2)
                 ->schema([
                     TextInput::make('stripe_live_secret')
                         ->label('Live secret key (sk_live_…)')
