@@ -41,18 +41,20 @@ class TicketingStatsOverview extends StatsOverviewWidget
             ->count();
 
         $paidOrders = ticketing_model('order')::query()
-            ->where('status', OrderStatus::Paid);
+            ->where('status', OrderStatus::Paid)
+            ->where('is_test', false);
 
         $revenue = (int) (clone $paidOrders)->sum('total');
         $paidCount = (clone $paidOrders)->count();
 
         $revenue30 = (int) ticketing_model('order')::query()
             ->where('status', OrderStatus::Paid)
+            ->where('is_test', false)
             ->where('paid_at', '>=', $now->copy()->subDays(30))
             ->sum('total');
 
         $ticketsSold = ticketing_model('attendee')::query()
-            ->whereHas('orderItem.order', fn ($query) => $query->where('status', OrderStatus::Paid))
+            ->whereHas('orderItem.order', fn ($query) => $query->where('status', OrderStatus::Paid)->where('is_test', false))
             ->count();
 
         $checkedIn = ticketing_model('attendee')::query()
@@ -61,6 +63,7 @@ class TicketingStatsOverview extends StatsOverviewWidget
 
         $pending = ticketing_model('order')::query()
             ->where('status', OrderStatus::Pending)
+            ->where('is_test', false)
             ->count();
 
         return [

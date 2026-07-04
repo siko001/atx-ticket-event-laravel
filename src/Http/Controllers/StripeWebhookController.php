@@ -2,6 +2,7 @@
 
 namespace AtxDigital\Ticketing\Http\Controllers;
 
+use AtxDigital\Ticketing\Payments\StripeKeys;
 use AtxDigital\Ticketing\Payments\StripeWebhookHandler;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -15,15 +16,28 @@ class StripeWebhookController extends Controller
 {
     public function __invoke(Request $request, StripeWebhookHandler $handler): Response
     {
-        try {
-            $event = Webhook::constructEvent(
-                $request->getContent(),
-                (string) $request->header('Stripe-Signature'),
-                (string) config('ticketing.stripe.webhook_secret'),
-            );
-        } catch (SignatureVerificationException|UnexpectedValueException $e) {
+        // Several Stripe accounts may feed this endpoint (per-connection keys),
+        // so try every known signing secret until one verifies.
+        $event = null;
+        $lastError = 'no webhook signing secrets configured';
+
+        foreach (StripeKeys::webhookSecretCandidates() as $secret) {
+            try {
+                $event = Webhook::constructEvent(
+                    $request->getContent(),
+                    (string) $request->header('Stripe-Signature'),
+                    $secret,
+                );
+
+                break;
+            } catch (SignatureVerificationException|UnexpectedValueException $e) {
+                $lastError = $e->getMessage();
+            }
+        }
+
+        if ($event === null) {
             Log::warning('Rejected Stripe webhook with invalid signature or payload.', [
-                'exception' => $e->getMessage(),
+                'exception' => $lastError,
             ]);
 
             return response('Invalid webhook.', 400);

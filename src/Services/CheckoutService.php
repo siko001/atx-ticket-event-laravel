@@ -6,6 +6,7 @@ use AtxDigital\Ticketing\Contracts\PaymentGatewayContract;
 use AtxDigital\Ticketing\Enums\OccurrenceStatus;
 use AtxDigital\Ticketing\Events\OrderCreated;
 use AtxDigital\Ticketing\Models\Attendee;
+use AtxDigital\Ticketing\Models\Connection;
 use AtxDigital\Ticketing\Models\DiscountCode;
 use AtxDigital\Ticketing\Models\Event;
 use AtxDigital\Ticketing\Models\EventOccurrence;
@@ -44,7 +45,7 @@ class CheckoutService
      *
      * @throws ValidationException
      */
-    public function checkout(Event $event, array $data): CheckoutResult
+    public function checkout(Event $event, array $data, ?Connection $connection = null): CheckoutResult
     {
         if (! $event->isPublished()) {
             throw ValidationException::withMessages(['event' => 'This event is not open for registration.']);
@@ -90,12 +91,14 @@ class CheckoutService
             ? (int) round($net * ((float) config('ticketing.vat.rate', 0)) / 100)
             : 0;
 
-        $order = DB::transaction(function () use ($event, $occurrence, $data, $discountCode, $pricedItems, $attendeeSets, $subtotal, $discountTotal, $vatTotal, $net) {
+        $order = DB::transaction(function () use ($event, $occurrence, $data, $discountCode, $pricedItems, $attendeeSets, $subtotal, $discountTotal, $vatTotal, $net, $connection) {
             /** @var Order $order */
             $order = ticketing_model('order')::query()->create([
                 'event_id' => $event->getKey(),
                 'event_occurrence_id' => $occurrence->getKey(),
                 'discount_code_id' => $discountCode?->getKey(),
+                'connection_id' => $connection?->exists ? $connection->getKey() : null,
+                'is_test' => (bool) ($connection->is_test_mode ?? false),
                 'currency' => $pricedItems[0][0]->currency,
                 'subtotal' => $subtotal,
                 'discount_total' => $discountTotal,

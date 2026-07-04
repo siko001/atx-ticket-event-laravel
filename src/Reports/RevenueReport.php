@@ -22,7 +22,8 @@ class RevenueReport extends Report
     {
         $query = ticketing_model('order')::query()
             ->with(['event', 'items'])
-            ->whereIn('status', $filters->statusesOr([OrderStatus::Paid]));
+            ->whereIn('status', $filters->statusesOr([OrderStatus::Paid]))
+            ->where('is_test', false);
 
         if ($filters->eventId !== null) {
             $query->where('event_id', $filters->eventId);

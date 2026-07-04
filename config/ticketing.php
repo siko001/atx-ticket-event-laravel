@@ -47,9 +47,15 @@ return [
     */
 
     'stripe' => [
+        // Live (default) keys.
         'secret' => env('STRIPE_SECRET'),
         'public' => env('STRIPE_KEY'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+
+        // Test keys — used for orders from connections in test mode.
+        // Both pairs can be overridden per connection on the Connections screen.
+        'test_secret' => env('STRIPE_TEST_SECRET'),
+        'test_webhook_secret' => env('STRIPE_TEST_WEBHOOK_SECRET'),
     ],
 
     /*

@@ -15,6 +15,10 @@ use Illuminate\Support\Carbon;
  * @property string $webhook_secret
  * @property bool $is_active
  * @property bool $is_test_mode
+ * @property string|null $stripe_live_secret
+ * @property string|null $stripe_live_webhook_secret
+ * @property string|null $stripe_test_secret
+ * @property string|null $stripe_test_webhook_secret
  * @property array<string, mixed>|null $last_test
  * @property array<string, mixed>|null $last_push
  * @property array<string, mixed>|null $last_pull
@@ -33,5 +37,9 @@ class Connection extends Model
         'last_test' => 'array',
         'last_push' => 'array',
         'last_pull' => 'array',
+        'stripe_live_secret' => 'encrypted',
+        'stripe_live_webhook_secret' => 'encrypted',
+        'stripe_test_secret' => 'encrypted',
+        'stripe_test_webhook_secret' => 'encrypted',
     ];
 }

@@ -16,9 +16,23 @@ class StripeGateway implements PaymentGatewayContract, PaymentVerifierContract
 {
     public function __construct(protected StripeClient $client) {}
 
+    /**
+     * Stripe client for this specific order: its connection's key overrides
+     * apply, and test/live follows the order's snapshotted is_test flag.
+     */
+    protected function clientFor(Order $order): StripeClient
+    {
+        $secret = StripeKeys::secretForOrder($order);
+
+        if (blank($secret)) {
+            throw new PaymentFailedException(StripeKeys::missingKeyHint($order));
+        }
+
+        return new StripeClient($secret);
+    }
+
     public function createCheckoutSession(Order $order): string
     {
-        $this->assertConfigured();
 
         $order->loadMissing(['items.ticketType', 'event']);
 
@@ -40,7 +54,7 @@ class StripeGateway implements PaymentGatewayContract, PaymentVerifierContract
         }
 
         try {
-            $session = $this->client->checkout->sessions->create($params);
+            $session = $this->clientFor($order)->checkout->sessions->create($params);
         } catch (ApiErrorException $e) {
             Log::error('Stripe checkout session creation failed.', [
                 'order' => $order->order_number,
@@ -57,8 +71,6 @@ class StripeGateway implements PaymentGatewayContract, PaymentVerifierContract
 
     public function refund(Order $order, ?int $amount = null): void
     {
-        $this->assertConfigured();
-
         if (blank($order->stripe_payment_intent_id)) {
             throw new RefundFailedException("Order {$order->order_number} has no payment intent to refund.");
         }
@@ -70,7 +82,7 @@ class StripeGateway implements PaymentGatewayContract, PaymentVerifierContract
         }
 
         try {
-            $this->client->refunds->create($params);
+            $this->clientFor($order)->refunds->create($params);
         } catch (ApiErrorException $e) {
             Log::error('Stripe refund failed.', [
                 'order' => $order->order_number,
@@ -83,8 +95,8 @@ class StripeGateway implements PaymentGatewayContract, PaymentVerifierContract
 
     public function verify(Order $order): PaymentVerification
     {
-        if (blank(config('ticketing.stripe.secret'))) {
-            return new PaymentVerification(null, null, 'Stripe is not configured (STRIPE_SECRET missing).');
+        if (blank(StripeKeys::secretForOrder($order))) {
+            return new PaymentVerification(null, null, StripeKeys::missingKeyHint($order));
         }
 
         if (blank($order->stripe_checkout_session_id)) {
@@ -92,7 +104,7 @@ class StripeGateway implements PaymentGatewayContract, PaymentVerifierContract
         }
 
         try {
-            $session = $this->client->checkout->sessions->retrieve($order->stripe_checkout_session_id);
+            $session = $this->clientFor($order)->checkout->sessions->retrieve($order->stripe_checkout_session_id);
         } catch (ApiErrorException $e) {
             return new PaymentVerification(null, null, $e->getMessage());
         }
@@ -150,15 +162,6 @@ class StripeGateway implements PaymentGatewayContract, PaymentVerifierContract
     protected function discountedUnitPrice(Order $order, int $unitPrice): int
     {
         return $unitPrice;
-    }
-
-    protected function assertConfigured(): void
-    {
-        if (blank(config('ticketing.stripe.secret'))) {
-            throw new PaymentFailedException(
-                'Stripe is not configured — set STRIPE_SECRET (and STRIPE_WEBHOOK_SECRET) in your .env.'
-            );
-        }
     }
 
     protected function returnUrl(Order $order, string $kind): string

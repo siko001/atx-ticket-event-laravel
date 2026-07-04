@@ -7,7 +7,7 @@ A reusable, client-agnostic events & ticketing package: Filament 4 admin, Stripe
 - Laravel 11–13, PHP 8.3+, Filament ^4.0
 - All money is stored as **integers in minor units** (cents); admin forms accept major units (5.50 → 550)
 - Events carry media (image/video + gallery), optional **named tickets** (`requires_attendee_details` — a name per ticket at checkout), categories, speakers, sponsors and dynamic registration questions
-- **Connections** screen manages multiple WordPress sites (own secret each, Active + Test-mode toggles, both synced two-way), with sync/order **Logs** under System
+- **Connections** screen manages multiple WordPress sites (own secret each, Active + Test-mode toggles, both synced two-way), each optionally with **its own Stripe test & live keys** (falling back to `STRIPE_SECRET`/`STRIPE_TEST_SECRET` in `.env`; test orders are badged and excluded from revenue), with sync/order **Logs** under System
 - Quality gates: Pest (80 tests), PHPStan level 6 (larastan), Pint
 
 ---

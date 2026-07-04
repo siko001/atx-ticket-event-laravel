@@ -129,6 +129,18 @@ request's (empty) body — i.e. the signed string is `"{timestamp}."`:
 `POST {checkout_url}` (see payload above) — public, rate-limited (default 20/min/IP).
 The WP plugin calls this **server-side** (proxied) so nothing sensitive runs in the browser.
 
+### Stripe keys & test mode
+
+The proxy signs its checkout POSTs with the same `X-Atx-Ticketing-*` HMAC headers
+(over the JSON body). Laravel matches the signature to a connection and snapshots
+`connection_id` + `is_test` (the connection's test-mode flag) onto the order. The
+Stripe keys used are a two-level cascade — the connection's own key pair when set,
+else the app-wide `.env` pair — with test/live chosen by the order's snapshotted
+mode (refunds therefore always hit the account/mode that took the payment).
+Unsigned checkouts are still accepted: no connection, live `.env` keys.
+Incoming Stripe webhooks are verified against every known signing secret
+(both `.env` pairs plus every connection override).
+
 ### Request
 
 ```json

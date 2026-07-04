@@ -28,6 +28,9 @@ use Illuminate\Support\Str;
  * @property int $total
  * @property string $purchaser_name
  * @property string $purchaser_email
+ * @property int|null $connection_id
+ * @property bool $is_test
+ * @property-read Connection|null $connection
  * @property string|null $purchaser_phone
  * @property string|null $purchaser_organisation
  * @property string|null $purchaser_country
@@ -55,6 +58,7 @@ class Order extends Model
     protected function casts(): array
     {
         return [
+            'is_test' => 'boolean',
             'status' => OrderStatus::class,
             'subtotal' => 'integer',
             'discount_total' => 'integer',
@@ -123,5 +127,10 @@ class Order extends Model
     protected static function newFactory(): Factory
     {
         return OrderFactory::new();
+    }
+
+    public function connection(): BelongsTo
+    {
+        return $this->belongsTo(Connection::class, 'connection_id');
     }
 }

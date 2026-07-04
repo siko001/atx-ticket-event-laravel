@@ -17,6 +17,7 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -74,7 +75,28 @@ class ConnectionResource extends TicketingResource
                 ->helperText('Inactive connections receive no pushes and their secret stops working — flip to swap sites.'),
             Toggle::make('is_test_mode')
                 ->label('Test mode')
-                ->helperText('Marks this site as testing: WordPress shows a prominent banner in its admin and on the buy form. Toggling here updates the site instantly (and vice versa).'),
+                ->helperText('This site then uses the TEST Stripe keys (below, or the STRIPE_TEST_* .env fallback), and WordPress shows a prominent test banner in its admin and on the buy form. Toggling here updates the site instantly (and vice versa).'),
+            Section::make('Stripe keys (optional overrides)')
+                ->description('Leave empty to use the app-wide .env keys. Fill these to give this site its own Stripe account. Which pair is used follows the Test mode toggle; orders remember the mode they were placed in, so refunds always use the right account. Stored encrypted.')
+                ->collapsed()
+                ->schema([
+                    TextInput::make('stripe_live_secret')
+                        ->label('Live secret key (sk_live_…)')
+                        ->password()->revealable()
+                        ->maxLength(255),
+                    TextInput::make('stripe_live_webhook_secret')
+                        ->label('Live webhook signing secret (whsec_…)')
+                        ->password()->revealable()
+                        ->maxLength(255),
+                    TextInput::make('stripe_test_secret')
+                        ->label('Test secret key (sk_test_…)')
+                        ->password()->revealable()
+                        ->maxLength(255),
+                    TextInput::make('stripe_test_webhook_secret')
+                        ->label('Test webhook signing secret (whsec_…)')
+                        ->password()->revealable()
+                        ->maxLength(255),
+                ]),
         ]);
     }
 

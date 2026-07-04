@@ -63,7 +63,12 @@ class OrderResource extends TicketingResource
     {
         return $table
             ->columns([
-                TextColumn::make('order_number')->searchable()->sortable(),
+                TextColumn::make('order_number')
+                    ->searchable()
+                    ->sortable()
+                    ->badge(fn ($record): bool => (bool) $record->is_test)
+                    ->color(fn ($record): ?string => $record->is_test ? 'warning' : null)
+                    ->formatStateUsing(fn (string $state, $record): string => $record->is_test ? $state.' · TEST' : $state),
                 TextColumn::make('event.title')->limit(30)->searchable(),
                 TextColumn::make('purchaser_email')->searchable()->toggleable(),
                 TextColumn::make('status')->badge(),
