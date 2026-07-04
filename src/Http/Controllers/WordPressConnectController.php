@@ -38,6 +38,7 @@ class WordPressConnectController
 
         return response()->json([
             'ok' => true,
+            'test_mode' => (bool) ($this->matched->is_test_mode ?? false),
             'app' => (string) config('app.name'),
             'time' => now()->toIso8601String(),
             'published_events' => ticketing_model('event')::query()
@@ -63,11 +64,39 @@ class WordPressConnectController
         ActivityLogger::sync("WordPress pulled a full sync ({$events->count()} event(s)).");
 
         return response()->json([
+            'test_mode' => (bool) ($this->matched->is_test_mode ?? false),
             'events' => $events
                 ->map(fn (Event $event): array => $payloadBuilder->build($event))
                 ->values()
                 ->all(),
         ]);
+    }
+
+    /**
+     * WP → Laravel: the site toggled test mode in its own dashboard.
+     * saveQuietly avoids the model event echoing the change straight back.
+     */
+    public function mode(Request $request): JsonResponse
+    {
+        if (($failure = $this->verifySignature($request)) !== null) {
+            return $failure;
+        }
+
+        $testMode = filter_var($request->input('test_mode'), FILTER_VALIDATE_BOOLEAN);
+
+        if ($this->matched !== null && $this->matched->exists) {
+            $this->matched->forceFill(['is_test_mode' => $testMode])->saveQuietly();
+
+            Settings::set('wp.last_pull', ['action' => 'mode', 'at' => now()->toIso8601String()]);
+
+            ActivityLogger::sync(
+                "\"{$this->matched->name}\" switched itself to ".($testMode ? 'TEST' : 'live').' mode from the WP dashboard.',
+                ['connection' => $this->matched->name, 'test_mode' => $testMode],
+                $testMode ? 'warning' : 'info',
+            );
+        }
+
+        return response()->json(['ok' => true, 'test_mode' => $testMode]);
     }
 
     /**

@@ -72,6 +72,9 @@ class ConnectionResource extends TicketingResource
                 ->label('Active')
                 ->default(true)
                 ->helperText('Inactive connections receive no pushes and their secret stops working — flip to swap sites.'),
+            Toggle::make('is_test_mode')
+                ->label('Test mode')
+                ->helperText('Marks this site as testing: WordPress shows a prominent banner in its admin and on the buy form. Toggling here updates the site instantly (and vice versa).'),
         ]);
     }
 
@@ -84,6 +87,8 @@ class ConnectionResource extends TicketingResource
                     ->description(fn (Connection $record): string => $record->webhook_url),
                 ToggleColumn::make('is_active')
                     ->label('Active'),
+                ToggleColumn::make('is_test_mode')
+                    ->label('Test mode'),
                 IconColumn::make('last_test.ok')
                     ->label('Last test')
                     ->boolean()

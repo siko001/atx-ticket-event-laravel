@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property string $webhook_url
  * @property string $webhook_secret
  * @property bool $is_active
+ * @property bool $is_test_mode
  * @property array<string, mixed>|null $last_test
  * @property array<string, mixed>|null $last_push
  * @property array<string, mixed>|null $last_pull
@@ -28,6 +29,7 @@ class Connection extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_test_mode' => 'boolean',
         'last_test' => 'array',
         'last_push' => 'array',
         'last_pull' => 'array',

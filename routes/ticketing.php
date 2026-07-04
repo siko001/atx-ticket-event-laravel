@@ -25,6 +25,8 @@ Route::prefix((string) config('ticketing.routes.api_prefix', 'api/ticketing'))
             ->name('wp.ping');
         Route::get('wp/events', [WordPressConnectController::class, 'events'])
             ->name('wp.events');
+        Route::post('wp/mode', [WordPressConnectController::class, 'mode'])
+            ->name('wp.mode');
     });
 
 if (config('ticketing.features.check_in', true)) {

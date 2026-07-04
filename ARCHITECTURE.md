@@ -113,7 +113,12 @@ request's (empty) body — i.e. the signed string is `"{timestamp}."`:
 - `GET /api/ticketing/wp/ping` → `{ ok, app, time, published_events }`.
   Backs the plugin's **Test connection** button. `401` = secret mismatch,
   `503` = Laravel has no `TICKETING_WP_WEBHOOK_SECRET` configured.
-- `GET /api/ticketing/wp/events` → `{ events: [ <event payload>, … ] }` — every
+- `POST /api/ticketing/wp/mode` (JSON body `{ "test_mode": true|false }`) — the WP
+  site toggled test mode locally; Laravel updates the matching connection. In the
+  other direction Laravel pushes a `connection.mode` webhook envelope
+  (`event: { test_mode: bool }`) when the flag is toggled in the admin. Ping/sync
+  responses also carry `test_mode` so pulls reconcile the flag.
+- `GET /api/ticketing/wp/events` → `{ test_mode, events: [ <event payload>, … ] }` — every
   published event, same payload shape as the webhook. Backs the plugin's
   **Sync now** button (full pull for first installs or after downtime).
 

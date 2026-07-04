@@ -15,15 +15,18 @@ use AtxDigital\Ticketing\Events\EventUpdated;
 use AtxDigital\Ticketing\Events\OrderCreated;
 use AtxDigital\Ticketing\Events\OrderPaid;
 use AtxDigital\Ticketing\Events\OrderRefunded;
+use AtxDigital\Ticketing\Jobs\PushEventToWordPress;
 use AtxDigital\Ticketing\Listeners\DispatchWordPressSync;
 use AtxDigital\Ticketing\Listeners\QueueTicketFulfillment;
 use AtxDigital\Ticketing\Listeners\RecordOrderActivity;
+use AtxDigital\Ticketing\Models\Connection;
 use AtxDigital\Ticketing\Observers\EventObserver;
 use AtxDigital\Ticketing\Payments\StripeGateway;
 use AtxDigital\Ticketing\Pricing\PricingEngine;
 use AtxDigital\Ticketing\Registration\RegistrationFormBuilder;
 use AtxDigital\Ticketing\Services\DompdfGenerator;
 use AtxDigital\Ticketing\Services\EndroidQrCodeGenerator;
+use AtxDigital\Ticketing\Support\ActivityLogger;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
@@ -42,7 +45,7 @@ class TicketingServiceProvider extends PackageServiceProvider
             ->name('ticketing')
             ->hasConfigFile()
             ->hasViews('ticketing')
-            ->hasMigrations(['create_ticketing_tables', 'create_ticketing_settings_table', 'create_ticketing_connections_table', 'create_ticketing_logs_table', 'update_ticketing_events_add_media', 'update_ticketing_events_add_attendee_details'])
+            ->hasMigrations(['create_ticketing_tables', 'create_ticketing_settings_table', 'create_ticketing_connections_table', 'update_ticketing_connections_add_test_mode', 'create_ticketing_logs_table', 'update_ticketing_events_add_media', 'update_ticketing_events_add_attendee_details'])
             ->hasCommands([
                 MaterializeOccurrencesCommand::class,
                 PushEventsToWordPressCommand::class,
@@ -86,6 +89,24 @@ class TicketingServiceProvider extends PackageServiceProvider
         EventFacade::listen(OrderCreated::class, RecordOrderActivity::class);
         EventFacade::listen(OrderPaid::class, RecordOrderActivity::class);
         EventFacade::listen(OrderRefunded::class, RecordOrderActivity::class);
+
+        // Test-mode toggles sync to the affected WordPress site instantly.
+        // (saveQuietly on the WP-initiated path prevents an echo loop.)
+        Connection::updated(function (Connection $connection): void {
+            if ($connection->wasChanged('is_test_mode')) {
+                ActivityLogger::sync(
+                    "Connection \"{$connection->name}\" switched to ".($connection->is_test_mode ? 'TEST' : 'live').' mode.',
+                    ['connection' => $connection->name, 'test_mode' => $connection->is_test_mode],
+                    $connection->is_test_mode ? 'warning' : 'info',
+                );
+
+                PushEventToWordPress::dispatch(
+                    'connection.mode',
+                    ['test_mode' => (bool) $connection->is_test_mode],
+                    (int) $connection->getKey(),
+                );
+            }
+        });
 
         // Host apps scope check-in access by defining their own
         // "ticketing.checkin" gate before this provider boots; this fallback

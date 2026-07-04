@@ -132,3 +132,50 @@ it('round-trips arbitrary setting values', function () {
     expect(Settings::get('wp.last_test'))->toBe(['ok' => true, 'message' => 'fine'])
         ->and(Settings::get('missing', 'fallback'))->toBe('fallback');
 });
+
+it('lets WordPress switch its connection to test mode via wp/mode', function () {
+    Http::fake();
+    $site = Connection::query()->create(['name' => 'Site A', 'webhook_url' => 'https://a.test/webhook', 'webhook_secret' => 'secret-a']);
+
+    $body = json_encode(['test_mode' => true]);
+    $timestamp = (string) time();
+
+    test()->call('POST', '/api/ticketing/wp/mode', [], [], [], [
+        'HTTP_X-Atx-Ticketing-Timestamp' => $timestamp,
+        'HTTP_X-Atx-Ticketing-Signature' => 'sha256='.hash_hmac('sha256', $timestamp.'.'.$body, 'secret-a'),
+        'HTTP_ACCEPT' => 'application/json',
+        'CONTENT_TYPE' => 'application/json',
+    ], $body)->assertOk();
+
+    expect($site->refresh()->is_test_mode)->toBeTrue();
+
+    // saveQuietly: no echo webhook back to the site.
+    Http::assertNothingSent();
+});
+
+it('pushes a connection.mode webhook when test mode is toggled in the admin', function () {
+    Http::fake(['*' => Http::response(['ok' => true])]);
+    $site = Connection::query()->create(['name' => 'Site A', 'webhook_url' => 'https://a.test/webhook', 'webhook_secret' => 'secret-a']);
+
+    $site->update(['is_test_mode' => true]);
+
+    Http::assertSent(function ($request) {
+        $payload = json_decode($request->body(), true);
+
+        return str_contains($request->url(), 'a.test')
+            && $payload['type'] === 'connection.mode'
+            && $payload['event']['test_mode'] === true;
+    });
+});
+
+it('reports test mode in the ping response', function () {
+    Connection::query()->create(['name' => 'Site A', 'webhook_url' => 'https://a.test/webhook', 'webhook_secret' => 'secret-a', 'is_test_mode' => true]);
+
+    $timestamp = (string) time();
+
+    test()->get('/api/ticketing/wp/ping', [
+        'X-Atx-Ticketing-Timestamp' => $timestamp,
+        'X-Atx-Ticketing-Signature' => 'sha256='.hash_hmac('sha256', $timestamp.'.', 'secret-a'),
+        'Accept' => 'application/json',
+    ])->assertOk()->assertJson(['test_mode' => true]);
+});
