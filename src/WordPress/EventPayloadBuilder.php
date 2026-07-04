@@ -3,6 +3,7 @@
 namespace AtxDigital\Ticketing\WordPress;
 
 use AtxDigital\Ticketing\Enums\OccurrenceStatus;
+use AtxDigital\Ticketing\Enums\OrderStatus;
 use AtxDigital\Ticketing\Models\Event;
 use Illuminate\Support\Facades\Storage;
 
@@ -20,6 +21,16 @@ class EventPayloadBuilder
     public function build(Event $event): array
     {
         $event->loadMissing(['occurrences', 'categories', 'speakers', 'sponsors', 'ticketTypes']);
+
+        // Real (non-test) paid units per ticket type, for availability display.
+        $soldByType = ticketing_model('order_item')::query()
+            ->whereIn('ticket_type_id', $event->ticketTypes->pluck('id'))
+            ->whereHas('order', fn ($query) => $query
+                ->where('status', OrderStatus::Paid)
+                ->where('is_test', false))
+            ->selectRaw('ticket_type_id, SUM(quantity) as sold')
+            ->groupBy('ticket_type_id')
+            ->pluck('sold', 'ticket_type_id');
 
         return [
             'id' => $event->getKey(),
@@ -80,6 +91,8 @@ class EventPayloadBuilder
                     'description' => $ticketType->description,
                     'price' => $ticketType->base_price,
                     'currency' => $ticketType->currency,
+                    'quantity_available' => $ticketType->quantity_available,
+                    'quantity_sold' => (int) ($soldByType[$ticketType->getKey()] ?? 0),
                 ])->values()->all(),
             'registration_questions' => $event->allRegistrationQuestions()->get()->map(fn ($question) => [
                 'id' => $question->getKey(),
