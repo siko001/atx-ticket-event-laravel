@@ -92,7 +92,7 @@ it('enforces a ticket-type-scoped question only for that type', function () {
 
     RegistrationQuestion::factory()->required()->create([
         'event_id' => $event->getKey(),
-        'ticket_type_id' => $vip->getKey(),
+        'ticket_type_ids' => [$vip->getKey()],
         'label' => 'Dinner choice?',
     ]);
 

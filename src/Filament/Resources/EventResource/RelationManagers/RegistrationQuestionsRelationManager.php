@@ -37,8 +37,9 @@ class RegistrationQuestionsRelationManager extends RelationManager
             TagsInput::make('options')
                 ->visible(fn (Get $get): bool => in_array($get('type'), ['select', 'radio'], true))
                 ->placeholder('Add an option and press Enter'),
-            Select::make('ticket_type_id')
-                ->label('Only for ticket type')
+            Select::make('ticket_type_ids')
+                ->label('Only for ticket types')
+                ->multiple()
                 ->options(function (): array {
                     /** @var Event $event */
                     $event = $this->getOwnerRecord();
@@ -47,7 +48,7 @@ class RegistrationQuestionsRelationManager extends RelationManager
                 })
                 ->placeholder('All ticket types')
                 ->native(false)
-                ->helperText('Leave empty to ask every attendee. Pick a type to ask only buyers of that ticket (e.g. a meal choice just for VIP).'),
+                ->helperText('Leave empty to ask every attendee. Pick one or more types to ask only those buyers (e.g. a meal choice for VIP and Standard).'),
             Toggle::make('is_required'),
             TextInput::make('sort_order')
                 ->numeric()
@@ -61,9 +62,18 @@ class RegistrationQuestionsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('label')->searchable(),
                 TextColumn::make('type')->badge(),
-                TextColumn::make('ticketType.name')
-                    ->label('Ticket type')
-                    ->placeholder('All'),
+                TextColumn::make('ticket_type_ids')
+                    ->label('Ticket types')
+                    ->state(function ($record): string {
+                        $ids = array_map('intval', (array) ($record->ticket_type_ids ?? []));
+
+                        if ($ids === []) {
+                            return 'All';
+                        }
+
+                        return ticketing_model('ticket_type')::query()
+                            ->whereIn('id', $ids)->pluck('name')->implode(', ');
+                    }),
                 IconColumn::make('is_required')->boolean(),
                 TextColumn::make('sort_order')->sortable(),
             ])

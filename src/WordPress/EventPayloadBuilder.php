@@ -96,7 +96,9 @@ class EventPayloadBuilder
                 ])->values()->all(),
             'registration_questions' => $event->allRegistrationQuestions()->get()->map(fn ($question) => [
                 'id' => $question->getKey(),
-                'ticket_type_id' => $question->ticket_type_id,
+                'ticket_type_ids' => array_map('intval', (array) ($question->ticket_type_ids ?? [])),
+                // Legacy single-type key for plugins < 1.3.1.
+                'ticket_type_id' => ((array) ($question->ticket_type_ids ?? []))[0] ?? null,
                 'label' => $question->label,
                 'type' => $question->type,
                 'options' => $question->options,

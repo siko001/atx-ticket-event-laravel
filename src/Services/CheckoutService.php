@@ -360,8 +360,7 @@ class CheckoutService
 
                 // Only questions for this attendee's ticket type (or global ones).
                 $applicable = $questions->filter(
-                    fn ($question): bool => $question->ticket_type_id === null
-                        || (int) $question->ticket_type_id === (int) $ticketType->getKey()
+                    fn ($question): bool => $question->appliesToTicketType((int) $ticketType->getKey())
                 )->values();
 
                 $attendee['responses'] = $this->validateAnswers($applicable, $answers);

@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property int $id
  * @property int|null $event_id
- * @property int|null $ticket_type_id
+ * @property array<int, int>|null $ticket_type_ids
  * @property string $label
  * @property string $type
  * @property array<int, string>|null $options
@@ -36,6 +36,7 @@ class RegistrationQuestion extends Model
             'options' => 'array',
             'is_required' => 'boolean',
             'sort_order' => 'integer',
+            'ticket_type_ids' => 'array',
         ];
     }
 
@@ -54,8 +55,14 @@ class RegistrationQuestion extends Model
         return RegistrationQuestionFactory::new();
     }
 
-    public function ticketType(): BelongsTo
+    /**
+     * Whether this question applies to attendees of the given ticket type
+     * (an empty scope means it applies to everyone).
+     */
+    public function appliesToTicketType(int $ticketTypeId): bool
     {
-        return $this->belongsTo(ticketing_model('ticket_type'), 'ticket_type_id');
+        $scope = array_map('intval', (array) ($this->ticket_type_ids ?? []));
+
+        return $scope === [] || in_array($ticketTypeId, $scope, true);
     }
 }
