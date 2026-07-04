@@ -95,7 +95,7 @@
                 </div>
                 <div class="atx-scan__stat">
                     <div class="atx-scan__stat-number" id="atx-stat-total">–</div>
-                    <div class="atx-scan__stat-label">Paid attendees</div>
+                    <div class="atx-scan__stat-label">Attendees</div>
                 </div>
             </div>
 

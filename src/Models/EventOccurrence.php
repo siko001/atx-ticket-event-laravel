@@ -55,6 +55,32 @@ class EventOccurrence extends Model
     }
 
     /**
+     * A scheduled occurrence whose end (or start, if no end) is in the past.
+     * Cancelled occurrences are never "past" — cancellation wins.
+     */
+    public function isPast(): bool
+    {
+        if ($this->status === OccurrenceStatus::Cancelled) {
+            return false;
+        }
+
+        return ($this->ends_at ?? $this->starts_at)->isPast();
+    }
+
+    /**
+     * Human status for display: Cancelled, Past, or Scheduled. "Past" is derived
+     * from the clock rather than stored, so it is always current.
+     */
+    public function displayStatus(): string
+    {
+        if ($this->status === OccurrenceStatus::Cancelled) {
+            return 'Cancelled';
+        }
+
+        return $this->isPast() ? 'Past' : 'Scheduled';
+    }
+
+    /**
      * Capacity override, falling back to the event's max_capacity. Null = unlimited.
      */
     public function effectiveCapacity(): ?int

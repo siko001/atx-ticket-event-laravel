@@ -67,7 +67,7 @@ class EventPayloadBuilder
                     'starts_at' => $occurrence->starts_at->toIso8601String(),
                     'ends_at' => $occurrence->ends_at?->toIso8601String(),
                     'capacity' => $occurrence->effectiveCapacity(),
-                    'status' => $occurrence->status->value,
+                    'status' => strtolower($occurrence->displayStatus()),
                 ])->values()->all(),
             'speakers' => $event->speakers->map(fn ($speaker) => [
                 'name' => $speaker->name,

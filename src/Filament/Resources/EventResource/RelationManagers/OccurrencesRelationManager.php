@@ -46,7 +46,14 @@ class OccurrencesRelationManager extends RelationManager
                 TextColumn::make('starts_at')->dateTime()->sortable(),
                 TextColumn::make('ends_at')->dateTime(),
                 TextColumn::make('capacity')->placeholder('Event default'),
-                TextColumn::make('status')->badge(),
+                TextColumn::make('status')
+                    ->badge()
+                    ->state(fn ($record): string => $record->displayStatus())
+                    ->color(fn (string $state): string => match ($state) {
+                        'Cancelled' => 'danger',
+                        'Past' => 'gray',
+                        default => 'success',
+                    }),
             ])
             ->defaultSort('starts_at')
             ->headerActions([

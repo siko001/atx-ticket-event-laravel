@@ -1,5 +1,6 @@
 <?php
 
+use AtxDigital\Ticketing\Enums\OccurrenceStatus;
 use AtxDigital\Ticketing\Models\Event;
 use AtxDigital\Ticketing\Models\EventOccurrence;
 use AtxDigital\Ticketing\Services\OccurrenceMaterializer;
@@ -63,4 +64,32 @@ it('does nothing for non-recurring events', function () {
 
     expect(app(OccurrenceMaterializer::class)->materialize($event))->toBe(0)
         ->and($event->occurrences()->count())->toBe(1);
+});
+
+it('reports display status as Past once a scheduled occurrence has ended', function () {
+    $event = Event::factory()->published()->create();
+
+    $past = EventOccurrence::factory()->for($event, 'event')->create([
+        'starts_at' => now()->subDays(2),
+        'ends_at' => now()->subDays(2)->addHours(2),
+        'status' => OccurrenceStatus::Scheduled,
+    ]);
+
+    $future = EventOccurrence::factory()->for($event, 'event')->create([
+        'starts_at' => now()->addDays(2),
+        'ends_at' => now()->addDays(2)->addHours(2),
+        'status' => OccurrenceStatus::Scheduled,
+    ]);
+
+    $cancelledPast = EventOccurrence::factory()->for($event, 'event')->create([
+        'starts_at' => now()->subDays(5),
+        'ends_at' => now()->subDays(5)->addHours(2),
+        'status' => OccurrenceStatus::Cancelled,
+    ]);
+
+    expect($past->displayStatus())->toBe('Past')
+        ->and($past->isPast())->toBeTrue()
+        ->and($future->displayStatus())->toBe('Scheduled')
+        ->and($cancelledPast->displayStatus())->toBe('Cancelled')
+        ->and($cancelledPast->isPast())->toBeFalse();
 });
