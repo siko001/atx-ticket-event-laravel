@@ -1,0 +1,78 @@
+{
+    "name": "atx-digital/ticketing",
+    "description": "Reusable events & ticketing for Laravel + Filament: Stripe Checkout, recurring events, QR check-in, reporting, and WordPress sync.",
+    "keywords": [
+        "laravel",
+        "filament",
+        "events",
+        "ticketing",
+        "stripe",
+        "qr-code"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "ATX Digital"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "barryvdh/laravel-dompdf": "^3.1",
+        "endroid/qr-code": "^6.0",
+        "filament/filament": "^4.0",
+        "illuminate/contracts": "^11.0|^12.0|^13.0",
+        "league/csv": "^9.16",
+        "rlanvin/php-rrule": "^2.5",
+        "spatie/laravel-package-tools": "^1.92",
+        "stripe/stripe-php": "^15.0|^16.0|^17.0"
+    },
+    "require-dev": {
+        "guzzlehttp/guzzle": "^7.8",
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.18",
+        "orchestra/testbench": "^9.5|^10.0|^11.0",
+        "pestphp/pest": "^3.5|^4.0",
+        "pestphp/pest-plugin-laravel": "^3.0|^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AtxDigital\\Ticketing\\": "src/",
+            "AtxDigital\\Ticketing\\Database\\Factories\\": "database/factories/"
+        },
+        "files": [
+            "src/Support/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AtxDigital\\Ticketing\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "lint": "vendor/bin/pint",
+        "test:lint": "vendor/bin/pint --test",
+        "test:types": "vendor/bin/phpstan analyse",
+        "test:unit": "vendor/bin/pest",
+        "test": [
+            "@test:lint",
+            "@test:types",
+            "@test:unit"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "AtxDigital\\Ticketing\\TicketingServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": false
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

@@ -1,0 +1,25 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 6
+    paths:
+        - src
+        - config
+        - database
+    ignoreErrors:
+        # Models are swappable via config('ticketing.models'), so relation/return
+        # generics are intentionally resolved at runtime rather than statically.
+        - identifier: missingType.generics
+        - identifier: missingType.iterableValue
+        # This IS a (publishable) config file; the package ships it outside an
+        # app's config/ directory, which trips larastan's env() rule.
+        -
+            identifier: larastan.noEnvCallsOutsideOfConfig
+            path: config/ticketing.php
+        # Package views ("ticketing::…") can't be statically verified without
+        # a booted host app.
+        -
+            identifier: argument.type
+            message: '#expects view-string#'
+    reportUnmatchedIgnoredErrors: false
