@@ -175,6 +175,7 @@
             function submitToken(token) {
                 token = (token || '').trim();
                 if (!token || busy) return;
+                if (!updateDayGate()) return;
                 const nowMs = Date.now();
                 if (token === lastToken && nowMs - lastTokenAt < 3000) return;
                 lastToken = token;
@@ -220,6 +221,24 @@
                 return eventsData.find((e) => String(e.id) === eventSelect.value) || null;
             }
 
+            function selectedOccurrence() {
+                const ev = currentEvent();
+                if (!ev) return null;
+                return ev.occurrences.find((o) => String(o.id) === occurrenceSelect.value) || null;
+            }
+
+            // Check-in is only valid on the day of the event. Off-day selections
+            // show a standing warning and are blocked before hitting the server.
+            function updateDayGate() {
+                const o = selectedOccurrence();
+                if (o && !o.is_today) {
+                    showResult('error', 'Event not on the day', null,
+                        'This event is not happening today — tickets can only be checked in on the event date.');
+                    return false;
+                }
+                return true;
+            }
+
             function populateOccurrences(ev) {
                 occurrenceSelect.innerHTML = '';
 
@@ -231,8 +250,16 @@
 
                 ev.occurrences.forEach((o) => occurrenceSelect.appendChild(new Option(o.label, o.id)));
 
+                if (ev.more_count > 0) {
+                    const more = new Option('… and ' + ev.more_count + ' more date' + (ev.more_count === 1 ? '' : 's'), '');
+                    more.disabled = true;
+                    occurrenceSelect.appendChild(more);
+                }
+
+                // Preselect today's date for door staff; otherwise the first shown date.
                 const today = ev.occurrences.find((o) => o.is_today);
                 occurrenceSelect.value = String((today || ev.occurrences[0]).id);
+                updateDayGate();
                 refreshStats();
             }
 
@@ -264,7 +291,7 @@
 
             eventSearch.addEventListener('input', () => renderEvents(eventSearch.value));
             eventSelect.addEventListener('change', () => populateOccurrences(currentEvent()));
-            occurrenceSelect.addEventListener('change', refreshStats);
+            occurrenceSelect.addEventListener('change', () => { updateDayGate(); refreshStats(); });
             renderEvents('');
             setInterval(refreshStats, 15000);
 

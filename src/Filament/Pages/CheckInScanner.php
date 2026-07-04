@@ -40,9 +40,11 @@ class CheckInScanner extends Page
      * Published events with upcoming (or very recent) dates, for the
      * two-step scanner picker: searchable event first, then its dates.
      * Ordered by each event's next date; today's dates are flagged so the
-     * front-end can preselect them for door staff.
+     * front-end can preselect them and gate check-in to the day. Each event
+     * shows its today date(s) plus the next 3 upcoming, with a count of any
+     * further dates hidden behind a "… and X more" line.
      *
-     * @return list<array{id: int, title: string, occurrences: list<array{id: int, label: string, is_today: bool}>}>
+     * @return list<array{id: int, title: string, more_count: int, occurrences: list<array{id: int, label: string, is_today: bool}>}>
      */
     public function scannerEvents(): array
     {
@@ -61,23 +63,27 @@ class CheckInScanner extends Page
             ->map(function (Collection $group) {
                 $event = $group->first()?->event;
                 $timezone = $event->timezone ?? 'UTC';
+                $title = (string) ($event->title ?? 'Unknown event');
+
+                $mapped = $group->map(function ($occurrence) use ($timezone, $title) {
+                    $local = $occurrence->starts_at->copy()->timezone($timezone);
+
+                    return [
+                        'id' => (int) $occurrence->getKey(),
+                        'label' => $title.' — '.($local->isToday() ? 'Today, ' : '').$local->format('D j M Y, H:i'),
+                        'is_today' => $local->isToday(),
+                    ];
+                });
+
+                // Always keep today's date(s); cap upcoming dates at the next 3.
+                [$today, $future] = $mapped->partition(fn ($o) => $o['is_today']);
+                $shownFuture = $future->take(3);
 
                 return [
                     'id' => (int) ($event?->getKey() ?? 0),
-                    'title' => (string) ($event->title ?? 'Unknown event'),
-                    'occurrences' => $group
-                        ->take(50)
-                        ->map(function ($occurrence) use ($timezone) {
-                            $local = $occurrence->starts_at->copy()->timezone($timezone);
-
-                            return [
-                                'id' => (int) $occurrence->getKey(),
-                                'label' => ($local->isToday() ? 'Today — ' : '').$local->format('D j M Y, H:i'),
-                                'is_today' => $local->isToday(),
-                            ];
-                        })
-                        ->values()
-                        ->all(),
+                    'title' => $title,
+                    'more_count' => max(0, $future->count() - $shownFuture->count()),
+                    'occurrences' => $today->concat($shownFuture)->values()->all(),
                 ];
             })
             ->values()
