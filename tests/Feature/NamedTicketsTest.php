@@ -1,9 +1,12 @@
 <?php
 
+use AtxDigital\Ticketing\Mail\AttendeeTicketMail;
+use AtxDigital\Ticketing\Mail\OrderConfirmationMail;
 use AtxDigital\Ticketing\Models\Attendee;
 use AtxDigital\Ticketing\Models\RegistrationQuestion;
 use AtxDigital\Ticketing\Models\TicketType;
 use AtxDigital\Ticketing\WordPress\EventPayloadBuilder;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -116,4 +119,35 @@ it('enforces a ticket-type-scoped question only for that type', function () {
         'purchaser' => ['name' => 'Ada', 'email' => 'ada@example.test'],
         'answers' => [(string) $question->getKey() => 'Fish'],
     ])->assertCreated();
+});
+
+it('emails attendees with their own address their personal ticket', function () {
+    Mail::fake();
+
+    [$event, $occurrence, $ticketType] = makePurchasableEvent(
+        ['base_price' => 0],
+        [],
+        ['requires_attendee_details' => true],
+    );
+
+    $this->postJson(checkoutUrl($event), checkoutPayload($occurrence, $ticketType, 2, [
+        'attendees' => [
+            ['ticket_type_id' => $ticketType->getKey(), 'name' => 'Mary Borg', 'email' => 'mary@example.test'],
+            ['ticket_type_id' => $ticketType->getKey(), 'name' => 'John Vella'],  // no email → buyer only
+        ],
+    ]))->assertCreated();
+
+    Mail::assertSent(
+        OrderConfirmationMail::class,
+        fn ($mail) => $mail->hasTo('ada@example.test'),
+    );
+    Mail::assertSent(
+        AttendeeTicketMail::class,
+        fn ($mail) => $mail->hasTo('mary@example.test') && $mail->attendee->name === 'Mary Borg',
+    );
+    // John falls back to the buyer's email → no separate personal mail.
+    Mail::assertNotSent(
+        AttendeeTicketMail::class,
+        fn ($mail) => $mail->attendee->name === 'John Vella',
+    );
 });
