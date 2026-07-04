@@ -2,6 +2,7 @@
 
 namespace AtxDigital\Ticketing\Filament\Resources\EventResource\RelationManagers;
 
+use AtxDigital\Ticketing\Models\Event;
 use AtxDigital\Ticketing\Registration\RegistrationFormBuilder;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -36,6 +37,17 @@ class RegistrationQuestionsRelationManager extends RelationManager
             TagsInput::make('options')
                 ->visible(fn (Get $get): bool => in_array($get('type'), ['select', 'radio'], true))
                 ->placeholder('Add an option and press Enter'),
+            Select::make('ticket_type_id')
+                ->label('Only for ticket type')
+                ->options(function (): array {
+                    /** @var Event $event */
+                    $event = $this->getOwnerRecord();
+
+                    return $event->ticketTypes()->pluck('name', 'id')->all();
+                })
+                ->placeholder('All ticket types')
+                ->native(false)
+                ->helperText('Leave empty to ask every attendee. Pick a type to ask only buyers of that ticket (e.g. a meal choice just for VIP).'),
             Toggle::make('is_required'),
             TextInput::make('sort_order')
                 ->numeric()
@@ -49,6 +61,9 @@ class RegistrationQuestionsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('label')->searchable(),
                 TextColumn::make('type')->badge(),
+                TextColumn::make('ticketType.name')
+                    ->label('Ticket type')
+                    ->placeholder('All'),
                 IconColumn::make('is_required')->boolean(),
                 TextColumn::make('sort_order')->sortable(),
             ])

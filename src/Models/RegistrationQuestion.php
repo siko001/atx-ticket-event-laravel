@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property int $id
  * @property int|null $event_id
+ * @property int|null $ticket_type_id
  * @property string $label
  * @property string $type
  * @property array<int, string>|null $options
@@ -51,5 +52,10 @@ class RegistrationQuestion extends Model
     protected static function newFactory(): Factory
     {
         return RegistrationQuestionFactory::new();
+    }
+
+    public function ticketType(): BelongsTo
+    {
+        return $this->belongsTo(ticketing_model('ticket_type'), 'ticket_type_id');
     }
 }

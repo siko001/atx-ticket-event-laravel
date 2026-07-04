@@ -99,6 +99,7 @@ class EventResource extends TicketingResource
                         ->helperText('Applies per occurrence. Leave empty for unlimited.'),
                     Toggle::make('requires_attendee_details')
                         ->label('Name every ticket')
+                        ->columnSpanFull()
                         ->helperText('Buyers must enter a name (and optional email) for each ticket — "Ticket 1: Mary, Ticket 2: John". Off = only the buyer\'s details are collected and tickets are issued in their name.'),
                     RichEditor::make('description')
                         ->columnSpanFull(),
@@ -120,6 +121,7 @@ class EventResource extends TicketingResource
                         ->maxSize(102400)
                         ->multiple()
                         ->reorderable()
+                        ->panelLayout('grid')
                         ->disk((string) config('ticketing.storage.media_disk', 'public'))
                         ->directory('ticketing/events/gallery')
                         ->helperText('Extra photos and clips shown in a gallery on the event page.'),

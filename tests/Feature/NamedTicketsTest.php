@@ -1,6 +1,8 @@
 <?php
 
 use AtxDigital\Ticketing\Models\Attendee;
+use AtxDigital\Ticketing\Models\RegistrationQuestion;
+use AtxDigital\Ticketing\Models\TicketType;
 use AtxDigital\Ticketing\WordPress\EventPayloadBuilder;
 use Illuminate\Support\Facades\Storage;
 
@@ -82,4 +84,36 @@ it('exposes the flag in the WordPress payload', function () {
     $payload = app(EventPayloadBuilder::class)->build($event);
 
     expect($payload['requires_attendee_details'])->toBeTrue();
+});
+
+it('enforces a ticket-type-scoped question only for that type', function () {
+    [$event, $occurrence, $standard] = makePurchasableEvent(['base_price' => 0, 'name' => 'Standard']);
+    $vip = TicketType::factory()->for($event, 'event')->create(['name' => 'VIP', 'base_price' => 0]);
+
+    RegistrationQuestion::factory()->required()->create([
+        'event_id' => $event->getKey(),
+        'ticket_type_id' => $vip->getKey(),
+        'label' => 'Dinner choice?',
+    ]);
+
+    // Buying only Standard: the VIP-only question must NOT block checkout.
+    $this->postJson(checkoutUrl($event), checkoutPayload($occurrence, $standard))
+        ->assertCreated();
+
+    // Buying VIP without answering it: blocked.
+    $this->postJson(checkoutUrl($event), [
+        'occurrence_id' => $occurrence->getKey(),
+        'items' => [['ticket_type_id' => $vip->getKey(), 'quantity' => 1]],
+        'purchaser' => ['name' => 'Ada', 'email' => 'ada@example.test'],
+    ])->assertStatus(422);
+
+    // Buying VIP with the answer: fine.
+    $question = RegistrationQuestion::query()->firstOrFail();
+
+    $this->postJson(checkoutUrl($event), [
+        'occurrence_id' => $occurrence->getKey(),
+        'items' => [['ticket_type_id' => $vip->getKey(), 'quantity' => 1]],
+        'purchaser' => ['name' => 'Ada', 'email' => 'ada@example.test'],
+        'answers' => [(string) $question->getKey() => 'Fish'],
+    ])->assertCreated();
 });

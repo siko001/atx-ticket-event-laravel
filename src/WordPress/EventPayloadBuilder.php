@@ -83,6 +83,7 @@ class EventPayloadBuilder
                 ])->values()->all(),
             'registration_questions' => $event->allRegistrationQuestions()->get()->map(fn ($question) => [
                 'id' => $question->getKey(),
+                'ticket_type_id' => $question->ticket_type_id,
                 'label' => $question->label,
                 'type' => $question->type,
                 'options' => $question->options,

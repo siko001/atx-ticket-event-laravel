@@ -358,7 +358,13 @@ class CheckoutService
                 // Per-attendee answers win over shared top-level answers.
                 $answers = array_replace($sharedAnswers, (array) ($attendee['answers'] ?? []));
 
-                $attendee['responses'] = $this->validateAnswers($questions, $answers);
+                // Only questions for this attendee's ticket type (or global ones).
+                $applicable = $questions->filter(
+                    fn ($question): bool => $question->ticket_type_id === null
+                        || (int) $question->ticket_type_id === (int) $ticketType->getKey()
+                )->values();
+
+                $attendee['responses'] = $this->validateAnswers($applicable, $answers);
                 unset($attendee['answers'], $attendee['ticket_type_id']);
 
                 $units[] = $attendee;
