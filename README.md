@@ -1,12 +1,14 @@
 # ATX Digital — Ticketing for Laravel + Filament
 
-A reusable, client-agnostic events & ticketing package: Filament 4 admin, Stripe Checkout payments, recurring events (RRULE), QR ticket check-in, reporting, and a signed webhook feed for the companion WordPress plugin (`atx-digital-ticketing-connect`).
+A reusable, client-agnostic events & ticketing package: Filament 4 admin, Stripe Checkout payments, recurring events (RRULE), QR ticket check-in, reporting, dashboard metrics, activity logs, and a signed two-way sync with one or more WordPress sites running the companion plugin (`atx-digital-ticketing-connect`).
 
 **Client-specific behaviour belongs in config, events and container bindings — never in edits to this package.**
 
 - Laravel 11–13, PHP 8.3+, Filament ^4.0
-- All money is stored as **integers in minor units** (cents)
-- Quality gates: Pest (54 tests), PHPStan level 6 (larastan), Pint
+- All money is stored as **integers in minor units** (cents); admin forms accept major units (5.50 → 550)
+- Events carry media (image/video + gallery), optional **named tickets** (`requires_attendee_details` — a name per ticket at checkout), categories, speakers, sponsors and dynamic registration questions
+- **Connections** screen manages multiple WordPress sites (own secret each, Active + Test-mode toggles, both synced two-way), with sync/order **Logs** under System
+- Quality gates: Pest (80 tests), PHPStan level 6 (larastan), Pint
 
 ---
 
@@ -14,6 +16,19 @@ A reusable, client-agnostic events & ticketing package: Filament 4 admin, Stripe
 
 ```bash
 composer require atx-digital/ticketing
+```
+
+Installing straight from GitHub (no Packagist)? Add the VCS repo to the app's
+`composer.json` first:
+
+```json
+"repositories": [
+    { "type": "vcs", "url": "https://github.com/siko001/atx-ticket-event-laravel" }
+]
+```
+
+```bash
+composer require atx-digital/ticketing:^1.0
 
 php artisan vendor:publish --tag=ticketing-config
 php artisan vendor:publish --tag=ticketing-migrations
@@ -197,6 +212,9 @@ The fallback gate defers to a `canAccessTicketingCheckIn()` method on your user 
 | `POST /ticketing/checkin/{token}` | scan a ticket (auth + `ticketing.checkin` gate, idempotent) |
 | `GET /ticketing/checkin/occurrences/{id}/stats` | live counts for the scanner |
 | `GET /ticketing/dev` | dev previews of email/ticket PDF/ICS (auth; local-only by default) |
+| `GET /api/ticketing/wp/ping` | WP plugin "Test connection" (HMAC-signed) |
+| `GET /api/ticketing/wp/events` | WP plugin "Sync now" — full published-events pull (HMAC-signed) |
+| `POST /api/ticketing/wp/mode` | WP toggled test mode locally (HMAC-signed) |
 
 Full request/response contracts — including the signed WordPress webhook payload — live in [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -212,3 +230,20 @@ composer test:unit   # pest only
 - Deleting an event with orders is blocked at the database level (`RESTRICT`) — cancel instead; financial records stay intact.
 - `checkout.session.completed` with `payment_status !== 'paid'` (async payment methods) is ignored; fulfilment happens on `checkout.session.async_payment_succeeded`.
 - Free orders (total 0) skip Stripe entirely and are fulfilled immediately.
+
+## Releasing a new version
+
+Composer detects updates from git tags — no registry step needed with the VCS repo.
+
+```bash
+# from this package's directory, after committing your changes:
+git tag -a v1.2.1 -m "v1.2.1"        # pick the next semver: fix = patch, feature = minor, breaking = major
+git push origin main --tags           # pushes the branch AND the tag
+
+# then, in any app that uses the package:
+composer outdated atx-digital/ticketing   # shows the new version
+composer update atx-digital/ticketing     # installs it
+```
+
+Forgot which tags exist? `git tag` (local) / `git ls-remote --tags origin` (GitHub).
+Tagged the wrong commit? `git tag -d v1.2.1 && git push origin :refs/tags/v1.2.1`, then re-tag.
