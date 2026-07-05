@@ -32,4 +32,12 @@ class RegistrationQuestionFactory extends Factory
             'options' => $options,
         ]);
     }
+
+    public function checkboxes(array $options): static
+    {
+        return $this->state([
+            'type' => 'checkboxes',
+            'options' => $options,
+        ]);
+    }
 }

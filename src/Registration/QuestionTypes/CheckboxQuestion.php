@@ -11,7 +11,7 @@ class CheckboxQuestion implements QuestionTypeContract
 {
     public function label(): string
     {
-        return 'Checkbox';
+        return 'Yes/No checkbox';
     }
 
     public function makeField(RegistrationQuestion $question): Field

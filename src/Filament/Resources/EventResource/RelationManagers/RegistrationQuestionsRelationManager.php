@@ -35,7 +35,8 @@ class RegistrationQuestionsRelationManager extends RelationManager
                 ->live()
                 ->native(false),
             TagsInput::make('options')
-                ->visible(fn (Get $get): bool => in_array($get('type'), ['select', 'radio'], true))
+                ->visible(fn (Get $get): bool => in_array($get('type'), ['select', 'radio', 'checkboxes'], true))
+                ->helperText('The choices attendees pick from.')
                 ->placeholder('Add an option and press Enter'),
             Select::make('ticket_type_ids')
                 ->label('Only for ticket types')

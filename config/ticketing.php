@@ -4,6 +4,7 @@ use AtxDigital\Ticketing\Models;
 use AtxDigital\Ticketing\Pricing\Rules\EarlyBirdRule;
 use AtxDigital\Ticketing\Pricing\Rules\PromoCodeRule;
 use AtxDigital\Ticketing\Pricing\Rules\QuantityBreakRule;
+use AtxDigital\Ticketing\Registration\QuestionTypes\CheckboxesQuestion;
 use AtxDigital\Ticketing\Registration\QuestionTypes\CheckboxQuestion;
 use AtxDigital\Ticketing\Registration\QuestionTypes\RadioQuestion;
 use AtxDigital\Ticketing\Registration\QuestionTypes\SelectQuestion;
@@ -227,6 +228,7 @@ return [
         'textarea' => TextareaQuestion::class,
         'select' => SelectQuestion::class,
         'checkbox' => CheckboxQuestion::class,
+        'checkboxes' => CheckboxesQuestion::class,
         'radio' => RadioQuestion::class,
     ],
 

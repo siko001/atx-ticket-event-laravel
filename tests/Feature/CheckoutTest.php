@@ -133,6 +133,41 @@ it('rejects answers outside a select question\'s options', function () {
     ]))->assertUnprocessable();
 });
 
+it('stores a multi-checkbox answer as a comma-joined string', function () {
+    [$event, $occurrence, $ticketType] = makePurchasableEvent();
+
+    $question = RegistrationQuestion::factory()->checkboxes(['Vegan', 'Halal', 'Gluten-free'])->create([
+        'event_id' => $event->getKey(),
+        'label' => 'Dietary requirements',
+    ]);
+
+    // The WordPress form submits the picks as a comma-separated string.
+    $response = $this->postJson(checkoutUrl($event), checkoutPayload($occurrence, $ticketType, 1, [
+        'answers' => [$question->getKey() => 'Vegan, Gluten-free'],
+    ]));
+
+    $response->assertCreated();
+
+    $row = Order::query()->findOrFail($response->json('order_id'))
+        ->attendees->first()->responses->first();
+
+    expect($row->label)->toBe('Dietary requirements')
+        ->and($row->value)->toBe('Vegan, Gluten-free');
+});
+
+it('rejects a multi-checkbox answer with an option that is not offered', function () {
+    [$event, $occurrence, $ticketType] = makePurchasableEvent();
+
+    $question = RegistrationQuestion::factory()->checkboxes(['Vegan', 'Halal'])->create([
+        'event_id' => $event->getKey(),
+    ]);
+
+    $this->postJson(checkoutUrl($event), checkoutPayload($occurrence, $ticketType, 1, [
+        'answers' => [$question->getKey() => 'Vegan, Pescatarian'],
+    ]))->assertUnprocessable()
+        ->assertJsonValidationErrors(["answers.{$question->getKey()}"]);
+});
+
 it('rejects orders exceeding occurrence capacity', function () {
     [$event, $occurrence, $ticketType] = makePurchasableEvent(occurrenceAttrs: ['capacity' => 1]);
 
