@@ -25,6 +25,8 @@ class TicketingStatsOverview extends StatsOverviewWidget
 
     protected ?string $pollingInterval = '60s';
 
+    protected string $view = 'ticketing::filament.widgets.ticketing-stats-overview';
+
     /**
      * Selected metric key per card slot, bound to each card's <select>
      * via wire:model.live. Empty keys fall back to the slot default.
@@ -33,9 +35,28 @@ class TicketingStatsOverview extends StatsOverviewWidget
      */
     public array $selectedMetrics = [];
 
+    /**
+     * Global event filter (event id as string, empty = all events), bound
+     * to the header <select>. Scopes every metric to the chosen event.
+     */
+    public ?string $eventFilter = null;
+
     public static function canView(): bool
     {
         return (bool) config('ticketing.features.dashboard_metrics', true);
+    }
+
+    /**
+     * Options for the header event picker: event id => title.
+     *
+     * @return array<int, string>
+     */
+    public function getEventOptions(): array
+    {
+        return ticketing_model('event')::query()
+            ->orderBy('title')
+            ->pluck('title', 'id')
+            ->all();
     }
 
     /**
@@ -231,6 +252,10 @@ class TicketingStatsOverview extends StatsOverviewWidget
     {
         $query = ticketing_model('event')::query();
 
+        if ($this->eventFilter) {
+            $query->whereKey($this->eventFilter);
+        }
+
         if ($status !== null) {
             $query->where('status', $status);
         }
@@ -243,6 +268,7 @@ class TicketingStatsOverview extends StatsOverviewWidget
         return ticketing_model('event_occurrence')::query()
             ->where('status', OccurrenceStatus::Scheduled)
             ->where('starts_at', '>=', Carbon::now())
+            ->when($this->eventFilter, fn ($query, $eventId) => $query->where('event_id', $eventId))
             ->count();
     }
 
@@ -250,7 +276,8 @@ class TicketingStatsOverview extends StatsOverviewWidget
     {
         $query = ticketing_model('order')::query()
             ->where('status', $status)
-            ->where('is_test', false);
+            ->where('is_test', false)
+            ->when($this->eventFilter, fn ($q, $eventId) => $q->where('event_id', $eventId));
 
         if ($withinDays !== null) {
             $query->where('paid_at', '>=', Carbon::now()->subDays($withinDays));
@@ -264,13 +291,17 @@ class TicketingStatsOverview extends StatsOverviewWidget
         return ticketing_model('order')::query()
             ->where('status', $status)
             ->where('is_test', false)
+            ->when($this->eventFilter, fn ($query, $eventId) => $query->where('event_id', $eventId))
             ->count();
     }
 
     protected function countTicketsSold(): int
     {
         return ticketing_model('attendee')::query()
-            ->whereHas('orderItem.order', fn ($query) => $query->where('status', OrderStatus::Paid)->where('is_test', false))
+            ->whereHas('orderItem.order', fn ($query) => $query
+                ->where('status', OrderStatus::Paid)
+                ->where('is_test', false)
+                ->when($this->eventFilter, fn ($q, $eventId) => $q->where('event_id', $eventId)))
             ->count();
     }
 
@@ -278,6 +309,8 @@ class TicketingStatsOverview extends StatsOverviewWidget
     {
         return ticketing_model('attendee')::query()
             ->whereNotNull('checked_in_at')
+            ->when($this->eventFilter, fn ($query, $eventId) => $query
+                ->whereHas('orderItem.order', fn ($q) => $q->where('event_id', $eventId)))
             ->count();
     }
 
