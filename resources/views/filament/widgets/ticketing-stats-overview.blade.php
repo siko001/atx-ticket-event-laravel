@@ -18,9 +18,10 @@
     <style>
         .atx-event-filter {
             display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.75rem;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.375rem;
+            margin-bottom: 1rem;
         }
 
         .atx-event-filter__label {
@@ -50,6 +51,35 @@
             border-color: rgb(255 255 255 / 0.1);
             background-color: rgb(255 255 255 / 0.05);
             color: #fff;
+        }
+
+        /* Per-card metric picker rendered in each Stat's label. */
+        .atx-stat-metric {
+            cursor: pointer;
+            border: 0;
+            border-bottom: 1px solid rgb(209 213 219); /* gray-300 */
+            border-radius: 0;
+            background-color: transparent;
+            padding: 0 0.25rem 0.125rem 0;
+            font-size: 0.875rem;
+            font-weight: 500;
+            line-height: 1.25rem;
+            color: rgb(107 114 128); /* gray-500 */
+        }
+
+        .atx-stat-metric:focus {
+            outline: none;
+            box-shadow: none;
+            border-bottom-color: rgb(107 114 128); /* gray-500 */
+        }
+
+        .dark .atx-stat-metric {
+            color: rgb(156 163 175); /* gray-400 */
+            border-bottom-color: rgb(255 255 255 / 0.2);
+        }
+
+        .dark .atx-stat-metric:focus {
+            border-bottom-color: rgb(156 163 175); /* gray-400 */
         }
     </style>
 

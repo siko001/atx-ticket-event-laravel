@@ -242,7 +242,7 @@ class TicketingStatsOverview extends StatsOverviewWidget
         }
 
         return new HtmlString(sprintf(
-            '<select wire:model.live="selectedMetrics.%s" class="-ms-0.5 cursor-pointer border-0 bg-transparent p-0 pe-6 text-sm font-medium text-gray-500 focus:ring-0 dark:text-gray-400">%s</select>',
+            '<select wire:model.live="selectedMetrics.%s" class="atx-stat-metric">%s</select>',
             e($slot),
             $optionsHtml,
         ));
