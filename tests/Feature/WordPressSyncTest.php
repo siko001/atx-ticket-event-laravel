@@ -1,6 +1,7 @@
 <?php
 
 use AtxDigital\Ticketing\Enums\EventStatus;
+use AtxDigital\Ticketing\Enums\OccurrenceStatus;
 use AtxDigital\Ticketing\Models\Event;
 use AtxDigital\Ticketing\Models\EventOccurrence;
 use AtxDigital\Ticketing\Models\TicketType;
@@ -65,6 +66,24 @@ it('pushes event.cancelled when a published event is cancelled', function () {
     $event->update(['status' => EventStatus::Cancelled]);
 
     Http::assertSent(fn (Request $request) => $request->data()['type'] === 'event.cancelled');
+});
+
+it('cancels still-scheduled occurrences when the event is cancelled', function () {
+    $event = Event::factory()->published()->create();
+
+    $scheduled = EventOccurrence::factory()->for($event, 'event')->create([
+        'status' => OccurrenceStatus::Scheduled,
+        'starts_at' => now()->addDays(3),
+    ]);
+    $alreadyCancelled = EventOccurrence::factory()->for($event, 'event')->create([
+        'status' => OccurrenceStatus::Cancelled,
+        'starts_at' => now()->addDays(5),
+    ]);
+
+    $event->update(['status' => EventStatus::Cancelled]);
+
+    expect($scheduled->refresh()->status)->toBe(OccurrenceStatus::Cancelled)
+        ->and($alreadyCancelled->refresh()->status)->toBe(OccurrenceStatus::Cancelled);
 });
 
 it('pushes event.deleted with just the id when an event is deleted', function () {
