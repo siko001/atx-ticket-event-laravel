@@ -5,13 +5,14 @@ namespace AtxDigital\Ticketing\Filament\Resources\EventResource\Pages;
 use AtxDigital\Ticketing\Enums\EventStatus;
 use AtxDigital\Ticketing\Enums\OccurrenceStatus;
 use AtxDigital\Ticketing\Filament\Resources\EventResource;
+use AtxDigital\Ticketing\Models\Event;
 use AtxDigital\Ticketing\Models\EventOccurrence;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Radio;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 
 class EditEvent extends EditRecord
 {
@@ -44,6 +45,17 @@ class EditEvent extends EditRecord
     }
 
     /**
+     * The record as a typed Event (Filament types $record loosely).
+     */
+    private function event(): Event
+    {
+        /** @var Event $record */
+        $record = $this->getRecord();
+
+        return $record;
+    }
+
+    /**
      * Called from the status Select the moment it changes. If the new status
      * cascades and there are eligible dates, open the confirmation modal.
      */
@@ -64,7 +76,7 @@ class EditEvent extends EditRecord
 
     public function confirmCascadeAction(): Action
     {
-        $status = $this->pendingStatus ? EventStatus::from($this->pendingStatus) : $this->record->status;
+        $status = $this->pendingStatus ? EventStatus::from($this->pendingStatus) : $this->event()->status;
         $target = $this->occurrenceStatusFor($status);
         $count = $target ? $this->eligibleOccurrences($target)->count() : 0;
 
@@ -107,11 +119,11 @@ class EditEvent extends EditRecord
      */
     protected function afterSave(): void
     {
-        if ($this->cascadeScope !== 'all' || ! $this->record->wasChanged('status')) {
+        if ($this->cascadeScope !== 'all' || ! $this->event()->wasChanged('status')) {
             return;
         }
 
-        $target = $this->occurrenceStatusFor($this->record->status);
+        $target = $this->occurrenceStatusFor($this->event()->status);
 
         if ($target === null) {
             return;
@@ -153,13 +165,16 @@ class EditEvent extends EditRecord
      */
     private function eligibleOccurrences(OccurrenceStatus $target): Collection
     {
-        return $this->record->occurrences()->get()->filter(function (EventOccurrence $occurrence) use ($target): bool {
-            if ($target === OccurrenceStatus::Cancelled && $occurrence->isPast()) {
-                return false;
-            }
+        return EventOccurrence::query()
+            ->where('event_id', $this->event()->getKey())
+            ->get()
+            ->filter(function (EventOccurrence $occurrence) use ($target): bool {
+                if ($target === OccurrenceStatus::Cancelled && $occurrence->isPast()) {
+                    return false;
+                }
 
-            return $occurrence->status !== $target;
-        });
+                return $occurrence->status !== $target;
+            });
     }
 
     /**
