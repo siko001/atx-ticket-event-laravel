@@ -9,6 +9,7 @@ enum OccurrenceStatus: string implements HasColor, HasLabel
 {
     case Scheduled = 'scheduled';
     case Cancelled = 'cancelled';
+    case Past = 'past';
 
     public function getLabel(): string
     {
@@ -20,6 +21,7 @@ enum OccurrenceStatus: string implements HasColor, HasLabel
         return match ($this) {
             self::Scheduled => 'success',
             self::Cancelled => 'danger',
+            self::Past => 'gray',
         };
     }
 }

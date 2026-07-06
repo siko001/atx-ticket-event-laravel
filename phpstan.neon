@@ -18,8 +18,12 @@ parameters:
             identifier: larastan.noEnvCallsOutsideOfConfig
             path: config/ticketing.php
         # Package views ("ticketing::…") can't be statically verified without
-        # a booted host app.
+        # a booted host app — neither when passed to view() nor when set as a
+        # widget/page $view (view-string) property default.
         -
             identifier: argument.type
             message: '#expects view-string#'
+        -
+            identifier: property.defaultValue
+            message: '#view-string#'
     reportUnmatchedIgnoredErrors: false

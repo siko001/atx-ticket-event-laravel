@@ -10,6 +10,7 @@ enum EventStatus: string implements HasColor, HasLabel
     case Draft = 'draft';
     case Published = 'published';
     case Cancelled = 'cancelled';
+    case Past = 'past';
 
     public function getLabel(): string
     {
@@ -22,6 +23,7 @@ enum EventStatus: string implements HasColor, HasLabel
             self::Draft => 'gray',
             self::Published => 'success',
             self::Cancelled => 'danger',
+            self::Past => 'gray',
         };
     }
 }

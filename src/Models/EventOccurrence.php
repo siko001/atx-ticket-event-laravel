@@ -56,7 +56,8 @@ class EventOccurrence extends Model
 
     /**
      * A scheduled occurrence whose end (or start, if no end) is in the past.
-     * Cancelled occurrences are never "past" — cancellation wins.
+     * Cancelled occurrences are never "past" — cancellation wins. A stored
+     * Past status (e.g. cascaded from a Past event) counts as past too.
      */
     public function isPast(): bool
     {
@@ -64,17 +65,26 @@ class EventOccurrence extends Model
             return false;
         }
 
+        if ($this->status === OccurrenceStatus::Past) {
+            return true;
+        }
+
         return ($this->ends_at ?? $this->starts_at)->isPast();
     }
 
     /**
-     * Human status for display: Cancelled, Past, or Scheduled. "Past" is derived
-     * from the clock rather than stored, so it is always current.
+     * Human status for display: Cancelled, Past, or Scheduled. Past can be
+     * stored (cascaded from the event) or derived from the clock, so it is
+     * always current.
      */
     public function displayStatus(): string
     {
         if ($this->status === OccurrenceStatus::Cancelled) {
             return 'Cancelled';
+        }
+
+        if ($this->status === OccurrenceStatus::Past) {
+            return 'Past';
         }
 
         return $this->isPast() ? 'Past' : 'Scheduled';

@@ -83,7 +83,15 @@ class EventResource extends TicketingResource
                         ->options(EventStatus::class)
                         ->default(EventStatus::Draft)
                         ->required()
-                        ->native(false),
+                        ->native(false)
+                        ->live()
+                        ->afterStateUpdated(function ($state, $livewire): void {
+                            // Prompt to cascade the status to the event's dates
+                            // as soon as it changes (Edit page only).
+                            if ($livewire instanceof Pages\EditEvent) {
+                                $livewire->onStatusChanged($state);
+                            }
+                        }),
                     Select::make('timezone')
                         ->options(array_combine(timezone_identifiers_list(), timezone_identifiers_list()))
                         ->searchable()
