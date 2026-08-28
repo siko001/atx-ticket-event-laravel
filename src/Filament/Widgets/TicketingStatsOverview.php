@@ -8,6 +8,7 @@ use AtxDigital\Ticketing\Enums\OrderStatus;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\HtmlString;
 
 /**
@@ -43,7 +44,13 @@ class TicketingStatsOverview extends StatsOverviewWidget
 
     public static function canView(): bool
     {
-        return (bool) config('ticketing.features.dashboard_metrics', true);
+        if (! (bool) config('ticketing.features.dashboard_metrics', true)) {
+            return false;
+        }
+
+        return Gate::has('ticketing.dashboard')
+            ? Gate::allows('ticketing.dashboard')
+            : true;
     }
 
     /**

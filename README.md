@@ -62,6 +62,10 @@ TicketingPlugin::make()
     ]);
 ```
 
+The dashboard metrics stay permissive by default. Define a
+`ticketing.dashboard` gate when the host application needs to scope them to a
+role or permission.
+
 ### Environment variables
 
 ```dotenv
