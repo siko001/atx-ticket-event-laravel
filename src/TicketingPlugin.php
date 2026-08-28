@@ -23,6 +23,8 @@ class TicketingPlugin implements Plugin
 
     protected bool $reportsEnabled = true;
 
+    protected bool $dashboardMetricsOnMainDashboard = true;
+
     protected string $navigationGroup = 'Ticketing';
 
     /**
@@ -60,6 +62,13 @@ class TicketingPlugin implements Plugin
         return $this;
     }
 
+    public function dashboardMetricsOnMainDashboard(bool $enabled = true): static
+    {
+        $this->dashboardMetricsOnMainDashboard = $enabled;
+
+        return $this;
+    }
+
     public function navigationGroup(string $group): static
     {
         $this->navigationGroup = $group;
@@ -88,6 +97,12 @@ class TicketingPlugin implements Plugin
     public function hasCheckIn(): bool
     {
         return $this->checkInEnabled && (bool) config('ticketing.features.check_in', true);
+    }
+
+    public function hasDashboardMetricsOnMainDashboard(): bool
+    {
+        return $this->dashboardMetricsOnMainDashboard
+            && (bool) config('ticketing.features.dashboard_metrics', true);
     }
 
     public function register(Panel $panel): void
@@ -127,7 +142,7 @@ class TicketingPlugin implements Plugin
 
         $panel->pages($pages);
 
-        if ((bool) config('ticketing.features.dashboard_metrics', true)) {
+        if ($this->hasDashboardMetricsOnMainDashboard()) {
             $panel->widgets([TicketingStatsOverview::class]);
         }
     }

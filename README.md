@@ -56,6 +56,7 @@ TicketingPlugin::make()
     ->navigationGroup('Events')       // default: "Ticketing"
     ->checkInEnabled(false)           // hide the QR scanner page
     ->reportsEnabled(false)           // hide the reports page
+    ->dashboardMetricsOnMainDashboard(false) // use metrics on a dedicated dashboard
     ->resources([                     // replace the resource list entirely,
         App\Filament\Resources\EventResource::class,   // e.g. with subclasses
         // ...
