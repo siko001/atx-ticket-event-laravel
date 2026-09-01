@@ -1,11 +1,34 @@
 <?php
 
+use AtxDigital\Ticketing\Contracts\WordPressConnectionProvider;
 use AtxDigital\Ticketing\Models\Connection;
 use AtxDigital\Ticketing\Support\Settings;
 use AtxDigital\Ticketing\Support\WpConnection;
 use AtxDigital\Ticketing\WordPress\ConnectionTester;
 use AtxDigital\Ticketing\WordPress\WebhookDispatcher;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+
+class TestWordPressConnectionProvider implements WordPressConnectionProvider
+{
+    public function targets(): Collection
+    {
+        $connection = new Connection;
+        $connection->name = 'Host application';
+        $connection->webhook_url = 'https://host.test/webhook';
+        $connection->webhook_secret = 'host-secret';
+        $connection->is_active = true;
+
+        return new Collection([$connection]);
+    }
+}
+
+it('allows the host application to provide WordPress connections', function () {
+    config()->set('ticketing.wordpress.connection_provider', TestWordPressConnectionProvider::class);
+
+    expect(WpConnection::targets()->sole()->name)->toBe('Host application')
+        ->and(WpConnection::secrets())->toBe(['host-secret']);
+});
 
 it('falls back to env config when no connections exist', function () {
     config()->set('ticketing.wp_webhook_url', 'https://env.test/webhook');

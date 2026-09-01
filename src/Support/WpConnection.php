@@ -2,15 +2,12 @@
 
 namespace AtxDigital\Ticketing\Support;
 
+use AtxDigital\Ticketing\Contracts\WordPressConnectionProvider;
 use AtxDigital\Ticketing\Models\Connection;
 use Illuminate\Support\Collection;
-use Throwable;
 
 /**
- * The connected WordPress site(s). Rows in ticketing_connections (managed
- * on the Connections screen) are the source of truth; when none exist the
- * legacy single connection (stored settings, then the TICKETING_WP_WEBHOOK_*
- * env values) is used, so existing installs keep working unchanged.
+ * The connected WordPress site(s), resolved by the configured provider.
  */
 class WpConnection
 {
@@ -22,20 +19,7 @@ class WpConnection
      */
     public static function targets(): Collection
     {
-        try {
-            /** @var Collection<int, Connection> $connections */
-            $connections = Connection::query()->where('is_active', true)->orderBy('id')->get();
-        } catch (Throwable) {
-            $connections = new Collection;
-        }
-
-        if ($connections->isNotEmpty()) {
-            return $connections;
-        }
-
-        $legacy = self::legacy();
-
-        return $legacy === null ? new Collection : new Collection([$legacy]);
+        return app(WordPressConnectionProvider::class)->targets();
     }
 
     /**
@@ -72,31 +56,5 @@ class WpConnection
     public static function configured(): bool
     {
         return self::targets()->isNotEmpty();
-    }
-
-    /**
-     * Legacy single connection from stored settings or env, or null.
-     */
-    protected static function legacy(): ?Connection
-    {
-        $url = (string) Settings::get('wp.webhook_url', '');
-        $secret = (string) Settings::get('wp.webhook_secret', '');
-
-        if ($url === '') {
-            $url = (string) config('ticketing.wp_webhook_url');
-            $secret = (string) config('ticketing.wp_webhook_secret');
-        }
-
-        if ($url === '' && $secret === '') {
-            return null;
-        }
-
-        $connection = new Connection;
-        $connection->name = 'Default';
-        $connection->webhook_url = $url;
-        $connection->webhook_secret = $secret;
-        $connection->is_active = true;
-
-        return $connection;
     }
 }

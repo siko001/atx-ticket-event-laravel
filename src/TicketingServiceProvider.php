@@ -8,6 +8,7 @@ use AtxDigital\Ticketing\Contracts\PaymentGatewayContract;
 use AtxDigital\Ticketing\Contracts\PaymentVerifierContract;
 use AtxDigital\Ticketing\Contracts\PdfGeneratorContract;
 use AtxDigital\Ticketing\Contracts\QrCodeGeneratorContract;
+use AtxDigital\Ticketing\Contracts\WordPressConnectionProvider;
 use AtxDigital\Ticketing\Events\EventCancelled;
 use AtxDigital\Ticketing\Events\EventDeleted;
 use AtxDigital\Ticketing\Events\EventPublished;
@@ -27,6 +28,7 @@ use AtxDigital\Ticketing\Registration\RegistrationFormBuilder;
 use AtxDigital\Ticketing\Services\DompdfGenerator;
 use AtxDigital\Ticketing\Services\EndroidQrCodeGenerator;
 use AtxDigital\Ticketing\Support\ActivityLogger;
+use AtxDigital\Ticketing\WordPress\DatabaseWordPressConnectionProvider;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
@@ -67,6 +69,12 @@ class TicketingServiceProvider extends PackageServiceProvider
         $this->app->singleton(PaymentVerifierContract::class, StripeGateway::class);
         $this->app->singleton(QrCodeGeneratorContract::class, EndroidQrCodeGenerator::class);
         $this->app->singleton(PdfGeneratorContract::class, DompdfGenerator::class);
+        $this->app->bind(WordPressConnectionProvider::class, function ($app) {
+            return $app->make((string) config(
+                'ticketing.wordpress.connection_provider',
+                DatabaseWordPressConnectionProvider::class,
+            ));
+        });
 
         $this->app->singleton(PricingEngine::class, function () {
             return new PricingEngine((array) config('ticketing.pricing_rules', []));

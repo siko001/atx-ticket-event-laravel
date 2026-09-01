@@ -10,6 +10,7 @@ use AtxDigital\Ticketing\Registration\QuestionTypes\RadioQuestion;
 use AtxDigital\Ticketing\Registration\QuestionTypes\SelectQuestion;
 use AtxDigital\Ticketing\Registration\QuestionTypes\TextareaQuestion;
 use AtxDigital\Ticketing\Registration\QuestionTypes\TextQuestion;
+use AtxDigital\Ticketing\WordPress\DatabaseWordPressConnectionProvider;
 
 return [
 
@@ -172,6 +173,10 @@ return [
 
     'wp_webhook_url' => env('TICKETING_WP_WEBHOOK_URL'),
     'wp_webhook_secret' => env('TICKETING_WP_WEBHOOK_SECRET'),
+
+    'wordpress' => [
+        'connection_provider' => DatabaseWordPressConnectionProvider::class,
+    ],
 
     /*
     |--------------------------------------------------------------------------
