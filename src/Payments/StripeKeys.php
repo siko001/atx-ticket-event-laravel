@@ -4,12 +4,13 @@ namespace AtxDigital\Ticketing\Payments;
 
 use AtxDigital\Ticketing\Models\Connection;
 use AtxDigital\Ticketing\Models\Order;
+use AtxDigital\Ticketing\Support\WpConnection;
 use Throwable;
 
 /**
  * Resolves which Stripe keys an order uses. Two-level cascade:
  *
- *   1. The order's connection may override either pair (Connections screen).
+ *   1. The order's database or host-provided connection may override either pair.
  *   2. Otherwise the app-wide .env pair applies:
  *      live → STRIPE_SECRET / STRIPE_WEBHOOK_SECRET
  *      test → STRIPE_TEST_SECRET / STRIPE_TEST_WEBHOOK_SECRET
@@ -22,7 +23,7 @@ class StripeKeys
 {
     public static function secretForOrder(Order $order): string
     {
-        $connection = $order->connection;
+        $connection = self::connectionForOrder($order);
 
         if ($order->is_test) {
             return (string) ($connection?->stripe_test_secret ?: config('ticketing.stripe.test_secret'));
@@ -33,7 +34,7 @@ class StripeKeys
 
     /**
      * Every webhook signing secret that incoming Stripe events may carry —
-     * the two .env pairs plus every connection override. Verification tries
+     * the two .env pairs plus every active provider override. Verification tries
      * each until one matches (multiple Stripe accounts = multiple secrets).
      *
      * @return list<string>
@@ -46,7 +47,7 @@ class StripeKeys
         ];
 
         try {
-            foreach (Connection::query()->get() as $connection) {
+            foreach (WpConnection::targets() as $connection) {
                 $candidates[] = (string) $connection->stripe_live_webhook_secret;
                 $candidates[] = (string) $connection->stripe_test_webhook_secret;
             }
@@ -64,9 +65,27 @@ class StripeKeys
     {
         $mode = $order->is_test ? 'test' : 'live';
         $env = $order->is_test ? 'STRIPE_TEST_SECRET' : 'STRIPE_SECRET';
+        $connection = self::connectionForOrder($order);
 
-        return $order->connection !== null
-            ? "No Stripe {$mode} key available for connection \"{$order->connection->name}\" — set one on the Connections screen or {$env} in .env."
+        return $connection !== null
+            ? "No Stripe {$mode} key available for connection \"{$connection->name}\" — set one on the connection provider or {$env} in .env."
             : "Stripe is not configured — set {$env} in .env.";
+    }
+
+    private static function connectionForOrder(Order $order): ?Connection
+    {
+        if ($order->connection !== null) {
+            return $order->connection;
+        }
+
+        if (blank($order->connection_reference)) {
+            return null;
+        }
+
+        try {
+            return WpConnection::resolve((string) $order->connection_reference);
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

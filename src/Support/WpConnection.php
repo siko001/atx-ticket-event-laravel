@@ -2,6 +2,7 @@
 
 namespace AtxDigital\Ticketing\Support;
 
+use AtxDigital\Ticketing\Contracts\ResolvesWordPressConnections;
 use AtxDigital\Ticketing\Contracts\WordPressConnectionProvider;
 use AtxDigital\Ticketing\Models\Connection;
 use Illuminate\Support\Collection;
@@ -20,6 +21,23 @@ class WpConnection
     public static function targets(): Collection
     {
         return app(WordPressConnectionProvider::class)->targets();
+    }
+
+    /**
+     * Resolve a host-provided connection reference, including inactive
+     * connections needed for historical payment operations.
+     */
+    public static function resolve(string $reference): ?Connection
+    {
+        $provider = app(WordPressConnectionProvider::class);
+
+        if ($provider instanceof ResolvesWordPressConnections) {
+            return $provider->resolve($reference);
+        }
+
+        return $provider->targets()->first(
+            fn (Connection $connection): bool => $connection->provider_reference === $reference,
+        );
     }
 
     /**

@@ -98,6 +98,7 @@ class CheckoutService
                 'event_occurrence_id' => $occurrence->getKey(),
                 'discount_code_id' => $discountCode?->getKey(),
                 'connection_id' => $connection?->exists ? $connection->getKey() : null,
+                'connection_reference' => $connection?->provider_reference,
                 'is_test' => (bool) ($connection->is_test_mode ?? false),
                 'currency' => $pricedItems[0][0]->currency,
                 'subtotal' => $subtotal,

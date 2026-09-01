@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $stripe_live_webhook_secret
  * @property string|null $stripe_test_secret
  * @property string|null $stripe_test_webhook_secret
+ * @property string|null $provider_reference
  * @property array<string, mixed>|null $last_test
  * @property array<string, mixed>|null $last_push
  * @property array<string, mixed>|null $last_pull

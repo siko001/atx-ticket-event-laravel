@@ -29,6 +29,7 @@ use Illuminate\Support\Str;
  * @property string $purchaser_name
  * @property string $purchaser_email
  * @property int|null $connection_id
+ * @property string|null $connection_reference
  * @property bool $is_test
  * @property-read Connection|null $connection
  * @property string|null $purchaser_phone

@@ -1,11 +1,43 @@
 <?php
 
+use AtxDigital\Ticketing\Contracts\ResolvesWordPressConnections;
+use AtxDigital\Ticketing\Contracts\WordPressConnectionProvider;
 use AtxDigital\Ticketing\Models\Connection;
 use AtxDigital\Ticketing\Models\Order;
 use AtxDigital\Ticketing\Payments\StripeKeys;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+
+class StripeWordPressConnectionProvider implements ResolvesWordPressConnections, WordPressConnectionProvider
+{
+    public function targets(): Collection
+    {
+        return new Collection([$this->connection()]);
+    }
+
+    public function resolve(string $reference): ?Connection
+    {
+        return $reference === 'wordpress-site:42' ? $this->connection() : null;
+    }
+
+    private function connection(): Connection
+    {
+        return new Connection([
+            'name' => 'Host WordPress site',
+            'webhook_url' => 'https://host.test/webhook',
+            'webhook_secret' => 'host-signing-secret',
+            'is_active' => true,
+            'is_test_mode' => true,
+            'provider_reference' => 'wordpress-site:42',
+            'stripe_live_secret' => 'sk_live_host',
+            'stripe_live_webhook_secret' => 'whsec_live_host',
+            'stripe_test_secret' => 'sk_test_host',
+            'stripe_test_webhook_secret' => 'whsec_test_host',
+        ]);
+    }
+}
 
 beforeEach(function () {
     fakeTicketingServices();
@@ -49,6 +81,18 @@ it('prefers the connection key overrides', function () {
         ->and(StripeKeys::secretForOrder(orderWith($connection, true)))->toBe('sk_test_own');
 });
 
+it('resolves host-provided keys for historical orders', function () {
+    config()->set('ticketing.wordpress.connection_provider', StripeWordPressConnectionProvider::class);
+
+    $liveOrder = orderWith(null, false);
+    $liveOrder->update(['connection_reference' => 'wordpress-site:42']);
+    $testOrder = orderWith(null, true);
+    $testOrder->update(['connection_reference' => 'wordpress-site:42']);
+
+    expect(StripeKeys::secretForOrder($liveOrder))->toBe('sk_live_host')
+        ->and(StripeKeys::secretForOrder($testOrder))->toBe('sk_test_host');
+});
+
 it('collects webhook secret candidates from env and all connections', function () {
     Connection::query()->create([
         'name' => 'Site', 'webhook_url' => 'https://s.test/w', 'webhook_secret' => 'ss',
@@ -58,6 +102,13 @@ it('collects webhook secret candidates from env and all connections', function (
 
     expect(StripeKeys::webhookSecretCandidates())
         ->toBe(['whsec_live_env', 'whsec_test_env', 'whsec_own_live', 'whsec_own_test']);
+});
+
+it('collects webhook signing secrets from a host connection provider', function () {
+    config()->set('ticketing.wordpress.connection_provider', StripeWordPressConnectionProvider::class);
+
+    expect(StripeKeys::webhookSecretCandidates())
+        ->toBe(['whsec_live_env', 'whsec_test_env', 'whsec_live_host', 'whsec_test_host']);
 });
 
 it('stores connection stripe keys encrypted at rest', function () {
@@ -109,4 +160,29 @@ it('leaves unsigned checkouts on live mode with no connection', function () {
 
     expect($order->connection_id)->toBeNull()
         ->and($order->is_test)->toBeFalse();
+});
+
+it('snapshots a host connection reference and test mode during checkout', function () {
+    config()->set('ticketing.wordpress.connection_provider', StripeWordPressConnectionProvider::class);
+
+    [$event, $occurrence, $ticketType] = makePurchasableEvent(['base_price' => 0]);
+
+    $payload = checkoutPayload($occurrence, $ticketType);
+    $body = json_encode($payload);
+    $timestamp = (string) time();
+
+    $response = test()->call('POST', checkoutUrl($event), [], [], [], [
+        'HTTP_X-Atx-Ticketing-Timestamp' => $timestamp,
+        'HTTP_X-Atx-Ticketing-Signature' => 'sha256='.hash_hmac('sha256', $timestamp.'.'.$body, 'host-signing-secret'),
+        'HTTP_ACCEPT' => 'application/json',
+        'CONTENT_TYPE' => 'application/json',
+    ], $body);
+
+    $response->assertCreated();
+
+    $order = Order::query()->findOrFail($response->json('order_id'));
+
+    expect($order->connection_id)->toBeNull()
+        ->and($order->connection_reference)->toBe('wordpress-site:42')
+        ->and($order->is_test)->toBeTrue();
 });
