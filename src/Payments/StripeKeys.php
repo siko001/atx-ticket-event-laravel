@@ -34,8 +34,9 @@ class StripeKeys
 
     /**
      * Every webhook signing secret that incoming Stripe events may carry —
-     * the two .env pairs plus every active provider override. Verification tries
-     * each until one matches (multiple Stripe accounts = multiple secrets).
+     * the two .env pairs plus database, active provider, and historical order
+     * overrides. Verification tries each until one matches (multiple Stripe
+     * accounts = multiple secrets).
      *
      * @return list<string>
      */
@@ -47,9 +48,24 @@ class StripeKeys
         ];
 
         try {
+            foreach (Connection::query()->get() as $connection) {
+                $candidates[] = (string) $connection->stripe_live_webhook_secret;
+                $candidates[] = (string) $connection->stripe_test_webhook_secret;
+            }
+
             foreach (WpConnection::targets() as $connection) {
                 $candidates[] = (string) $connection->stripe_live_webhook_secret;
                 $candidates[] = (string) $connection->stripe_test_webhook_secret;
+            }
+
+            foreach (Order::query()
+                ->whereNotNull('connection_reference')
+                ->distinct()
+                ->pluck('connection_reference') as $reference) {
+                $connection = WpConnection::resolve((string) $reference);
+
+                $candidates[] = (string) $connection?->stripe_live_webhook_secret;
+                $candidates[] = (string) $connection?->stripe_test_webhook_secret;
             }
         } catch (Throwable) {
             // Table missing — .env candidates only.

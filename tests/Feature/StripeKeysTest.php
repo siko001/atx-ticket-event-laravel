@@ -39,6 +39,27 @@ class StripeWordPressConnectionProvider implements ResolvesWordPressConnections,
     }
 }
 
+class HistoricalStripeWordPressConnectionProvider implements ResolvesWordPressConnections, WordPressConnectionProvider
+{
+    public function targets(): Collection
+    {
+        return new Collection;
+    }
+
+    public function resolve(string $reference): ?Connection
+    {
+        if ($reference !== 'wordpress-site:42') {
+            return null;
+        }
+
+        return new Connection([
+            'name' => 'Inactive host WordPress site',
+            'stripe_live_webhook_secret' => 'whsec_historical_live',
+            'stripe_test_webhook_secret' => 'whsec_historical_test',
+        ]);
+    }
+}
+
 beforeEach(function () {
     fakeTicketingServices();
     Storage::fake('local');
@@ -109,6 +130,15 @@ it('collects webhook signing secrets from a host connection provider', function 
 
     expect(StripeKeys::webhookSecretCandidates())
         ->toBe(['whsec_live_env', 'whsec_test_env', 'whsec_live_host', 'whsec_test_host']);
+});
+
+it('keeps webhook signing secrets available for historical host orders', function () {
+    config()->set('ticketing.wordpress.connection_provider', HistoricalStripeWordPressConnectionProvider::class);
+    $order = orderWith(null, true);
+    $order->update(['connection_reference' => 'wordpress-site:42']);
+
+    expect(StripeKeys::webhookSecretCandidates())
+        ->toBe(['whsec_live_env', 'whsec_test_env', 'whsec_historical_live', 'whsec_historical_test']);
 });
 
 it('stores connection stripe keys encrypted at rest', function () {
